@@ -1,0 +1,14 @@
+.card-img,
+.card-img-bottom,
+.card-img-top {
+  height: 200px !important;
+  margin: 0 auto;
+}
+
+.btn1 {
+  color: rgb(0, 217, 255);
+  font-size: 18px;
+}
+.btn1:hover {
+  color: rgb(3, 196, 230);
+}

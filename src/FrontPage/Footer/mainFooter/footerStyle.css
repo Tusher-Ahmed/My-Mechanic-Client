@@ -1,0 +1,20 @@
+@import url("https://fonts.googleapis.com/css2?family=Lobster&display=swap");
+.footerS {
+  padding: 50px 0;
+}
+.footer-brand,
+.footBrand {
+  font-family: "Lobster", cursive;
+}
+.footBrand {
+  color: rgb(4, 118, 116);
+}
+.fNote {
+  width: 80%;
+  text-align: left;
+  margin: 0 auto;
+}
+.social {
+  color: #fff !important;
+  font-size: 26px;
+}

@@ -1,0 +1,56 @@
+.LoginUser {
+  width: 500px;
+  padding: 25px 3px;
+  border: 1px solid rgb(231, 231, 209);
+  border-radius: 20px;
+  /* position: absolute; */
+  position: fixed;
+  height: fit-content;
+  z-index: 1111;
+  background-color: rgba(6, 0, 3, 0.439);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.logo {
+  color: #fff;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+.LoginUser input {
+  border: none;
+  background-color: rgba(255, 255, 255, 0.713);
+}
+.formStyle {
+  position: relative;
+  width: 90%;
+  left: 5%;
+}
+.btnR {
+  background-color: #0fc8f6;
+  border-radius: 100px;
+  border: none;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.failure {
+  color: red;
+  font-size: 12px;
+}
+.crossR {
+  position: absolute;
+  color: #fff;
+  top: 5%;
+  right: 5%;
+  cursor: pointer;
+  padding: 1px;
+}
+.crossR:hover {
+  color: red;
+}
+@media (max-width: 560px) {
+  .LoginUser {
+    width: 90%;
+  }
+}

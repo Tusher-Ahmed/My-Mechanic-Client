@@ -1,0 +1,49 @@
+.leftSide {
+  height: 100%;
+  text-align: left;
+}
+.userList {
+  list-style: none;
+  padding-top: 40px;
+}
+.userList li {
+  display: block;
+  padding: 5px 15px;
+  margin: 20px 0;
+  background-color: rgb(243, 250, 251);
+  cursor: pointer;
+}
+.userList li:hover {
+  background-color: rgb(47, 2, 70);
+  color: #fff;
+}
+.head h3 {
+  padding: 10px 0;
+  font-size: 1.5rem;
+  color: rgb(47, 2, 70);
+}
+.head h5 {
+  font-size: 1rem;
+  padding: 10px 0;
+  color: rgb(47, 2, 70);
+  text-transform: lowercase;
+}
+.box {
+  line-height: 1.5;
+}
+.box1 {
+  background-color: rgb(223, 250, 244);
+}
+.box h5 {
+  font-size: 16px;
+}
+.box li {
+  font-size: 12px;
+}
+.settinngForm {
+  padding: 40px 0;
+}
+.settinngForm input {
+  padding: 5px 0;
+  margin: 20px 0;
+}

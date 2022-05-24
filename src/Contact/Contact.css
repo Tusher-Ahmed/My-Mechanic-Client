@@ -1,0 +1,23 @@
+.heading {
+  text-transform: uppercase;
+  font-size: 20px;
+  margin: 20px auto 40px auto;
+}
+.formDesign {
+  position: relative;
+  width: 80%;
+  left: 10%;
+}
+.btnsend {
+  margin: 10px 0;
+  padding: 5px 40px;
+  background-color: #000;
+  color: #fff;
+  border: 1px solid #000;
+  border-radius: 20px;
+  font-weight: bold;
+}
+.btnsend:hover {
+  background-color: #fff;
+  color: #000;
+}
