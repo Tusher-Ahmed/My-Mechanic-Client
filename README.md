@@ -129,6 +129,3 @@ active plan appear on the map. Payments currently use a demo checkout, ready for
 ## Author
 
 **Tusher Ahmed** · [GitHub](https://github.com/Tusher-Ahmed) · [LinkedIn](https://www.linkedin.com/in/tusher-ahmed-6b9b70210/)
-
-Project presentation (original version):
-[Google Slides](https://docs.google.com/presentation/d/11vKXGPKSR5Irre3PJkIuvo9b7oBikkT3/edit?usp=sharing&ouid=112073153374308217236&rtpof=true&sd=true)
