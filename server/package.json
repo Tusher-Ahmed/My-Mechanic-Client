@@ -1,20 +1,26 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "server",
+  "version": "2.0.0",
+  "description": "My Mechanic REST API (Express + MongoDB)",
+  "type": "module",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file-if-exists=.env src/index.js",
+    "seed:admin": "node --env-file-if-exists=.env src/scripts/seedAdmin.js"
   },
-  "keywords": [],
-  "author": "",
+  "engines": {
+    "node": ">=20.6"
+  },
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.1",
-    "moment-timezone": "^0.5.34",
-    "mongoose": "^6.0.12"
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.24.11",
+    "morgan": "^1.12.1"
   }
 }

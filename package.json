@@ -2,17 +2,24 @@
   "name": "my-mechanic",
   "private": true,
   "description": "My Mechanic – find nearby mechanics on a map and book services (client, admin, API).",
-  "workspaces": ["server", "client", "admin"],
+  "workspaces": [
+    "server",
+    "e2e"
+  ],
   "scripts": {
     "dev": "concurrently -n server,client,admin -c blue,green,magenta \"npm run dev -w server\" \"npm run dev -w client\" \"npm run dev -w admin\"",
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
     "dev:admin": "npm run dev -w admin",
     "build": "npm run build -w client && npm run build -w admin",
-    "seed:admin": "npm run seed:admin -w server"
+    "seed:admin": "npm run seed:admin -w server",
+    "test": "npm test -w e2e",
+    "test:api": "npm run test:api -w e2e"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }
