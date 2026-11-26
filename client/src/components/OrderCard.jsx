@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { Calendar, Mail, MessageSquareText, Phone, Store, UserRound } from "lucide-react";
 import { Link } from "react-router";
 import { StatusBadge } from "./ui";
+import { CarTypeIcon } from "./VehiclePicker";
 import { date, money } from "../lib/format";
 import { fadeUp } from "../lib/motion";
 
@@ -35,6 +36,21 @@ export default function OrderCard({ order, viewer, actions }) {
 
       <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto]">
         <div>
+          {order.vehicle && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5 ring-1 ring-slate-100" data-testid="order-vehicle">
+              <CarTypeIcon type={order.vehicle.type} className="h-5 w-11 shrink-0 text-brand-600" />
+              <div className="min-w-0 text-sm">
+                <p className="truncate font-semibold text-ink-900">
+                  {order.vehicle.make} {order.vehicle.model}
+                  {order.vehicle.year && <span className="font-normal text-slate-500"> · {order.vehicle.year}</span>}
+                </p>
+                <p className="truncate text-xs text-slate-500">
+                  {order.vehicle.type}
+                  {order.vehicle.plate && <> · <span className="font-mono tracking-wide">{order.vehicle.plate}</span></>}
+                </p>
+              </div>
+            </div>
+          )}
           <ul className="space-y-1.5 text-sm">
             {order.services.map((s, i) => (
               <li key={i} className="flex justify-between gap-6">

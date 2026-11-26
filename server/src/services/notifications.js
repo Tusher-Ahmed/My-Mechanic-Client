@@ -1,6 +1,7 @@
 // Creates notifications and pushes them in real time over Server-Sent Events.
 // Subscribers are kept in memory (one server instance is enough for this project).
 import { Notification } from "../models/Notification.js";
+import { vehicleLabel } from "../models/vehicle.js";
 
 const subscribers = new Map(); // "role:id" -> Set<res>
 const key = (role, id) => `${role}:${id}`;
@@ -46,7 +47,7 @@ export const orderEvents = {
       role: "mechanic",
       type: "order_new",
       title: `New order from ${order.user.username}`,
-      body: `${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
+      body: `${order.vehicle ? vehicleLabel(order.vehicle) + " – " : ""}${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,
     });

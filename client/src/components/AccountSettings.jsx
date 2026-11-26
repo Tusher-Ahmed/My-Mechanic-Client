@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, UserRound } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { CarFront, KeyRound, Plus, Trash2, UserRound } from "lucide-react";
+import { CarTypeIcon, VehicleForm, cleanVehicle, isVehicleComplete } from "./VehiclePicker";
+import { emptyVehicle, vehicleKey } from "../data/vehicles";
 import { useAuth } from "../context/AuthContext";
 import { errorMessage } from "../lib/api";
 import { Button, Field } from "./ui";
@@ -77,5 +80,93 @@ export function PasswordForm() {
         Update password
       </Button>
     </form>
+  );
+}
+
+/** Customer's saved cars (max 5) – used to prefill bookings. */
+export function MyCarsForm() {
+  const { account, updateProfile } = useAuth();
+  const cars = account.vehicles ?? [];
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ ...emptyVehicle });
+  const [busy, setBusy] = useState(false);
+
+  const save = async (vehicles, message) => {
+    setBusy(true);
+    try {
+      await updateProfile({ vehicles });
+      toast.success(message);
+      return true;
+    } catch (err) {
+      toast.error(errorMessage(err));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const add = async () => {
+    if (!isVehicleComplete(draft)) return toast.error("Choose the car type and enter make and model.");
+    if (await save([cleanVehicle(draft), ...cars], "Car saved")) {
+      setDraft({ ...emptyVehicle });
+      setAdding(false);
+    }
+  };
+  const remove = (i) => save(cars.filter((_, idx) => idx !== i), "Car removed");
+
+  return (
+    <div className="card p-6 sm:p-8">
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <CarFront className="size-5 text-brand-600" /> My cars
+        </h3>
+        {!adding && cars.length < 5 && (
+          <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
+            <Plus className="size-4" /> Add car
+          </Button>
+        )}
+      </div>
+      <p className="mt-1 text-sm text-slate-500">Saved cars are pre-filled when you book. You can save up to 5.</p>
+
+      <ul className="mt-5 space-y-2">
+        <AnimatePresence initial={false}>
+          {cars.map((v, i) => (
+            <motion.li key={vehicleKey(v)} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-3">
+                <CarTypeIcon type={v.type} className="h-6 w-14 shrink-0 text-brand-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink-900">
+                    {v.make} {v.model}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">{[v.type, v.year, v.plate].filter(Boolean).join(" · ")}</p>
+                </div>
+                <button onClick={() => remove(i)} disabled={busy} className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${v.make} ${v.model}`}>
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
+      {cars.length === 0 && !adding && <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">No saved cars yet.</p>}
+
+      <AnimatePresence>
+        {adding && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 sm:p-5">
+              <VehicleForm value={draft} onChange={setDraft} idPrefix="mycar" />
+              <div className="mt-5 flex gap-2">
+                <Button size="sm" onClick={add} loading={busy}>
+                  Save car
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

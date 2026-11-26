@@ -9,6 +9,7 @@ import { FilterChips, useMyOrders } from "./Account";
 import OrderCard from "../components/OrderCard";
 import ServiceEditor from "../components/ServiceEditor";
 import LocationPicker from "../components/LocationPicker";
+import { CarTypeChooser } from "../components/VehiclePicker";
 import { PasswordForm, ProfileForm } from "../components/AccountSettings";
 import { GearLoader, TighteningWrench } from "../components/mech";
 import { AnimatedNumber, Button, EmptyState, Field, Tabs } from "../components/ui";
@@ -36,6 +37,7 @@ function ShopForm() {
     shopname: account.shopname,
     address: account.address ?? "",
     services: account.services ?? [],
+    vehicleTypes: account.vehicleTypes ?? [],
     location: { latitude: account.latitude, longitude: account.longitude },
   });
   const [busy, setBusy] = useState(false);
@@ -48,6 +50,7 @@ function ShopForm() {
         shopname: form.shopname,
         address: form.address,
         services: form.services.map(({ _id, serviceName, price }) => ({ _id, serviceName, price })),
+        vehicleTypes: form.vehicleTypes,
         latitude: form.location.latitude,
         longitude: form.location.longitude,
       });
@@ -75,6 +78,12 @@ function ShopForm() {
         <div className="mt-5">
           <ServiceEditor value={form.services} onChange={(services) => setForm({ ...form, services })} />
         </div>
+      </div>
+      <div className="card p-6 sm:p-8">
+        <h3 className="text-lg font-semibold">Car types we service</h3>
+        <p className="mt-1 mb-5 text-sm text-slate-500">Customers filter the map by car type – only selected types can book you.</p>
+        <CarTypeChooser multiple value={form.vehicleTypes} onChange={(vehicleTypes) => setForm({ ...form, vehicleTypes })} />
+        {form.vehicleTypes.length === 0 && <p className="mt-3 text-sm font-medium text-rose-600">Select at least one car type.</p>}
       </div>
       <div className="card p-6 sm:p-8">
         <h3 className="mb-5 text-lg font-semibold">Shop location</h3>

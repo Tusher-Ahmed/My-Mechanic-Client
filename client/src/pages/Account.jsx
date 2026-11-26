@@ -6,7 +6,7 @@ import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNotificationEvents } from "../context/NotificationsContext";
 import OrderCard from "../components/OrderCard";
-import { PasswordForm, ProfileForm } from "../components/AccountSettings";
+import { MyCarsForm, PasswordForm, ProfileForm } from "../components/AccountSettings";
 import { GearLoader } from "../components/mech";
 import { Avatar, Button, EmptyState, Tabs } from "../components/ui";
 import { dur, ease } from "../lib/motion";
@@ -146,6 +146,7 @@ export default function Account() {
             )
           ) : (
             <div className="space-y-6">
+              <MyCarsForm />
               <ProfileForm />
               <PasswordForm />
             </div>

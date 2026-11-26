@@ -15,8 +15,8 @@ const MODELS = { user: User, mechanic: Mechanic, admin: Admin };
 
 /** Fields each role may set on itself (register + profile update). */
 const EDITABLE = {
-  user: ["username", "phone"],
-  mechanic: ["username", "phone", "shopname", "address", "latitude", "longitude", "services"],
+  user: ["username", "phone", "vehicles"],
+  mechanic: ["username", "phone", "shopname", "address", "latitude", "longitude", "services", "vehicleTypes"],
   admin: ["username"],
 };
 

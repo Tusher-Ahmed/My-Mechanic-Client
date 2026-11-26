@@ -50,12 +50,20 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (53 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (61 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
 - [ ] T.5 Admin UI tests (UI-AD-01…08) after Phase 4
 - [ ] T.6 Full journey test (E2E-01)
+
+## Phase V – Car model & type
+- [x] V.1 Order requires the car: type, make, model (+ optional year, number plate)
+- [x] V.2 Garages choose which car types they service; map filter "My car type"; server refuses unsupported types
+- [x] V.3 Customers can save up to 5 cars to their profile ("save this car")
+- [x] V.4 Car shown on order cards and in the mechanic's notification
+- [x] V.5 API tests API-CAR-01…08
+- [x] V.6 Client UI: car picker in booking, map filter, garage car types, "My cars" in settings, showcase
 
 ## Phase 5 – Deployment prep
 - [ ] 5.1 `render.yaml` for the backend; `vercel.json` (SPA routing) for client and admin
@@ -68,3 +76,6 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [ ] 6.3 Vercel: deploy `client/` and `admin/` with `VITE_API_URL`
 - [ ] 6.4 Run admin seed script on the production database
 - [ ] 6.5 Push branch / merge to `main`
+
+## Later – to discuss after the build (no code now)
+- [ ] B.1 Business model / admin profit plan (commission, featured garages, subscriptions, partnerships…) – interview talking points

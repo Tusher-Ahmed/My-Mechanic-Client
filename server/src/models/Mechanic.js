@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { accountPlugin, phoneField } from "./accountPlugin.js";
+import { VEHICLE_TYPES } from "./vehicle.js";
 
 const ServiceSchema = new Schema({
   serviceName: { type: String, required: [true, "Service name is required"], trim: true },
@@ -26,10 +27,16 @@ const MechanicSchema = new Schema({
   latitude: { type: Number, required: [true, "Shop location is required"], min: -90, max: 90 },
   longitude: { type: Number, required: [true, "Shop location is required"], min: -180, max: 180 },
   services: { type: [ServiceSchema], default: [] },
+  // car types this garage works on (all by default)
+  vehicleTypes: {
+    type: [{ type: String, enum: { values: VEHICLE_TYPES, message: "Invalid car type" } }],
+    default: () => [...VEHICLE_TYPES],
+    validate: [(v) => v.length > 0, "Select at least one car type you service"],
+  },
 });
 MechanicSchema.plugin(accountPlugin);
 
 /** Fields that anyone (not logged in) may see on the map / store page. */
-export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services createdAt";
+export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services vehicleTypes createdAt";
 
 export const Mechanic = model("Mechanic", MechanicSchema);

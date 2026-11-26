@@ -47,13 +47,13 @@ function accountRoutes(path, Model, fields, { onDelete } = {}) {
   });
 }
 
-accountRoutes("users", User, ["username", "email", "phone"], {
+accountRoutes("users", User, ["username", "email", "phone", "vehicles"], {
   onDelete: (doc) => Order.deleteMany({ user: doc._id }),
 });
 accountRoutes(
   "mechanics",
   Mechanic,
-  ["username", "email", "phone", "nid", "shopname", "address", "latitude", "longitude", "services"],
+  ["username", "email", "phone", "nid", "shopname", "address", "latitude", "longitude", "services", "vehicleTypes"],
   { onDelete: (doc) => Order.deleteMany({ mechanic: doc._id }) }
 );
 

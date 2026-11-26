@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 53 tests
+## 1. API tests (`e2e/tests/api`) – 61 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -116,6 +116,18 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
 
+### Car model & type – `vehicles.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-CAR-01 | Order needs the car (type, make, model); bad type / future year rejected | ✅ |
+| API-CAR-02 | Car stored on the order; plate uppercased; year/plate optional | ✅ |
+| API-CAR-03 | Mechanic sees the car on the order and in the notification | ✅ |
+| API-CAR-04 | Garages list serviced car types (all by default); map filter by type | ✅ |
+| API-CAR-05 | Booking a car type the garage doesn't service is refused | ✅ |
+| API-CAR-06 | Mechanic keeps at least one car type and can update them | ✅ |
+| API-CAR-07 | "Save this car" stores it once, newest first, max 5 | ✅ |
+| API-CAR-08 | User manages saved cars in profile; admin can see them | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -126,10 +138,10 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 | Step | Checked | Status |
 |---|---|---|
 | Home hero, how-it-works, features, mechanics band, FAQ render | ✅ screenshots 01–05 | ✅ |
-| Map lists 3 shops, "Near me" sorts by distance, pin → popup | ✅ 06–07 | ✅ |
-| Guest logs in from the dialog, selects services, total updates, books | ✅ 08–10 | ✅ |
-| Mechanic receives the order **live** (badge, toast, dashboard) | ✅ 11–13 | ✅ |
-| Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown | ✅ 14–17 | ✅ |
+| Map lists 3 shops, "My car type" filter (SUV → 2 shops), "Near me" sorts by distance, pin → popup | ✅ 06–07 | ✅ |
+| Guest logs in, enters the car (type, make, model, year, plate), selects services, total updates, books | ✅ 08–10 | ✅ |
+| Mechanic receives the order **live** (badge, toast, dashboard) and sees the car + plate | ✅ 11–13 | ✅ |
+| Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown; car saved in "My cars" | ✅ 14–17b | ✅ |
 | Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |
 | Phone width (390px): home, menu, map – no horizontal scroll | ✅ 23–25 | ✅ |
 

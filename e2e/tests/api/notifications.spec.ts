@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { API_URL } from "../../playwright.config";
-import { auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
+import { CAR, auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
 
 const list = async (request, token) => (await request.get("notifications", auth(token))).json();
 
@@ -41,7 +41,7 @@ test("API-NOTIF-04 mark one as read, then mark all as read", async ({ request })
   const user2 = await registerUser(request);
   // second order to the same mechanic
   const services = mech.session.account.services;
-  await request.post("orders", { data: { mechanicId: mech.session.account._id, serviceIds: [services[0]._id] }, ...auth(user2.session.token) });
+  await request.post("orders", { data: { mechanicId: mech.session.account._id, serviceIds: [services[0]._id], vehicle: CAR }, ...auth(user2.session.token) });
 
   let data = await list(request, mech.session.token);
   expect(data.unread).toBe(2);
@@ -95,7 +95,7 @@ test("API-NOTIF-07 live stream delivers a notification instantly", async ({ requ
   try {
     await waitFor("ready");
     const s = mech.session.account.services[0];
-    await request.post("orders", { data: { mechanicId: mech.session.account._id, serviceIds: [s._id] }, ...auth(user.session.token) });
+    await request.post("orders", { data: { mechanicId: mech.session.account._id, serviceIds: [s._id], vehicle: CAR }, ...auth(user.session.token) });
     const n = await waitFor("notification");
     expect(n.type).toBe("order_new");
     expect(n.title).toContain(user.body.username);

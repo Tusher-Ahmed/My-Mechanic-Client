@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { VehicleSchema } from "./vehicle.js";
 
 export const ORDER_STATUSES = ["pending", "accepted", "completed", "cancelled"];
 
@@ -13,6 +14,7 @@ const OrderSchema = new Schema(
       validate: [(v) => v.length > 0, "Choose at least one service"],
     },
     totalPrice: { type: Number, required: true, min: 0 },
+    vehicle: { type: VehicleSchema, required: [true, "Tell us which car needs service"] },
     note: { type: String, trim: true, maxlength: 500 },
     status: { type: String, enum: ORDER_STATUSES, default: "pending" },
   },

@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
+import { CAR, auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
 
 test.describe("Placing orders", () => {
   test("API-ORD-01 must be logged in as a user", async ({ request }) => {
     const mech = await registerMechanic(request);
-    const data = { mechanicId: mech.session.account._id, serviceIds: [mech.session.account.services[0]._id] };
+    const data = { mechanicId: mech.session.account._id, serviceIds: [mech.session.account.services[0]._id], vehicle: CAR };
     expect((await request.post("orders", { data })).status()).toBe(401);
     expect((await request.post("orders", { data, ...auth(mech.session.token) })).status()).toBe(403);
   });
@@ -14,7 +14,7 @@ test.describe("Placing orders", () => {
     const mech = await registerMechanic(request);
     const [s1, s2] = mech.session.account.services;
     const res = await request.post("orders", {
-      data: { mechanicId: mech.session.account._id, serviceIds: [s1._id, s2._id], totalPrice: 1 },
+      data: { mechanicId: mech.session.account._id, serviceIds: [s1._id, s2._id], totalPrice: 1, vehicle: CAR },
       ...auth(user.session.token),
     });
     expect(res.status()).toBe(201);
@@ -28,10 +28,10 @@ test.describe("Placing orders", () => {
     const user = await registerUser(request);
     const mech = await registerMechanic(request);
     const mechanicId = mech.session.account._id;
-    const empty = await request.post("orders", { data: { mechanicId, serviceIds: [] }, ...auth(user.session.token) });
+    const empty = await request.post("orders", { data: { mechanicId, serviceIds: [], vehicle: CAR }, ...auth(user.session.token) });
     expect(empty.status()).toBe(400);
     const unknown = await request.post("orders", {
-      data: { mechanicId, serviceIds: ["000000000000000000000000"] },
+      data: { mechanicId, serviceIds: ["000000000000000000000000"], vehicle: CAR },
       ...auth(user.session.token),
     });
     expect(unknown.status()).toBe(400);

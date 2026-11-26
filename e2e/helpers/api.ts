@@ -5,6 +5,9 @@ let counter = 0;
 /** Unique suffix so every test creates its own accounts and tests can run in parallel. */
 export const uid = () => `${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+/** Default car used when a test places an order. */
+export const CAR = { type: "Sedan", make: "Toyota", model: "Axio", year: 2016, plate: "Dhaka-Ga-12-3456" };
+
 export const auth = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } });
 
 export type Session = { token: string; role: string; account: any };
@@ -54,7 +57,7 @@ export async function createOrderFixture(request: APIRequestContext) {
   const mech = await registerMechanic(request);
   const [s1, s2] = mech.session.account.services;
   const res = await request.post("orders", {
-    data: { mechanicId: mech.session.account._id, serviceIds: [s1._id, s2._id] },
+    data: { mechanicId: mech.session.account._id, serviceIds: [s1._id, s2._id], vehicle: CAR },
     ...auth(user.session.token),
   });
   return { user, mech, order: await res.json(), res };

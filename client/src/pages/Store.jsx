@@ -9,6 +9,8 @@ import { money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { Car, Gear, GearLoader } from "../components/mech";
 import { AnimatedNumber, Button, EmptyState, Field, Modal } from "../components/ui";
+import VehiclePicker, { CarTypeIcon, cleanVehicle, isVehicleComplete } from "../components/VehiclePicker";
+import { emptyVehicle, getPreferredCarType, vehicleLabel } from "../data/vehicles";
 import { dur, ease, fadeUp, stagger } from "../lib/motion";
 
 function ServiceCard({ service, selected, onToggle, disabled }) {
@@ -85,13 +87,23 @@ function OrderPlaced({ open, onClose, shopname }) {
 
 export default function Store() {
   const { id } = useParams();
-  const { role, openAuth } = useAuth();
+  const { role, account, openAuth, refreshMe } = useAuth();
   const [shop, setShop] = useState(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [placed, setPlaced] = useState(false);
+  const savedCars = role === "user" ? (account?.vehicles ?? []) : [];
+  const [car, setCar] = useState({ vehicle: { ...emptyVehicle, type: getPreferredCarType() }, save: true });
+
+  // when the customer logs in, preselect their first saved car
+  useEffect(() => {
+    if (role === "user" && account?.vehicles?.length) {
+      const v = account.vehicles[0];
+      setCar({ vehicle: { ...emptyVehicle, ...v, year: v.year ?? "", plate: v.plate ?? "" }, save: false });
+    }
+  }, [role, account?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     api
@@ -104,11 +116,26 @@ export default function Store() {
   const total = chosen.reduce((sum, s) => sum + s.price, 0);
   const toggle = (sid) => setSelected((list) => (list.includes(sid) ? list.filter((x) => x !== sid) : [...list, sid]));
 
+  const carReady = isVehicleComplete(car.vehicle);
+  const carSupported = !car.vehicle.type || !shop?.vehicleTypes || shop.vehicleTypes.includes(car.vehicle.type);
+
   const book = async () => {
     if (role !== "user") return openAuth("login", "user");
+    if (!carReady) {
+      toast.error("Tell us which car needs service (type, make and model).");
+      document.getElementById("your-car")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setBusy(true);
     try {
-      await api.post("/orders", { mechanicId: shop._id, serviceIds: selected, note: note.trim() || undefined });
+      await api.post("/orders", {
+        mechanicId: shop._id,
+        serviceIds: selected,
+        vehicle: cleanVehicle(car.vehicle),
+        saveVehicle: car.save,
+        note: note.trim() || undefined,
+      });
+      if (car.save) refreshMe().catch(() => {});
       setPlaced(true);
       setSelected([]);
       setNote("");
@@ -170,6 +197,16 @@ export default function Store() {
               <Wrench className="size-4 text-brand-400" /> {shop.services.length} services
             </span>
           </div>
+          {shop.vehicleTypes?.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold tracking-wide text-slate-400 uppercase">We service</span>
+              {shop.vehicleTypes.map((t) => (
+                <span key={t} className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white">
+                  <CarTypeIcon type={t} className="h-3.5 w-8 text-brand-300" /> {t}
+                </span>
+              ))}
+            </div>
+          )}
           <Button href={googleMapsUrl(shop)} target="_blank" rel="noopener noreferrer" variant="accent" size="sm" className="mt-6">
             <Navigation className="size-4" /> Get directions
           </Button>
@@ -178,7 +215,33 @@ export default function Store() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <section>
-          <h2 className="text-xl font-bold">Choose your services</h2>
+          {role !== "mechanic" && (
+            <div id="your-car" className="card mb-8 p-5 sm:p-6">
+              <h2 className="flex items-center gap-2 text-xl font-bold">
+                <span className="grid size-7 place-items-center rounded-full bg-ink-900 text-sm text-white">1</span> Your car
+              </h2>
+              <p className="mt-1 mb-5 text-sm text-slate-500">The mechanic sees this before accepting, so they come prepared.</p>
+              <VehiclePicker saved={savedCars} value={car} onChange={setCar} key={savedCars.length ? "saved" : "new"} />
+              <AnimatePresence>
+                {!carSupported && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    role="alert"
+                    className="mt-4 rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-800"
+                  >
+                    {shop.shopname} doesn't service {car.vehicle.type} cars. Pick another car type or find another garage on the map.
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            {role !== "mechanic" && <span className="grid size-7 place-items-center rounded-full bg-ink-900 text-sm text-white">2</span>}
+            Choose your services
+          </h2>
           <p className="mt-1 text-sm text-slate-500">Select one or more – prices are fixed by the shop.</p>
           {shop.services.length === 0 ? (
             <p className="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-slate-500">This shop hasn't listed any services yet.</p>
@@ -222,6 +285,13 @@ export default function Store() {
             </ul>
             {chosen.length === 0 && <p className="mt-4 text-sm text-slate-400">Nothing selected yet.</p>}
 
+            {carReady && role !== "mechanic" && (
+              <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2.5 text-sm ring-1 ring-slate-100">
+                <CarTypeIcon type={car.vehicle.type} className="h-4 w-9 shrink-0 text-brand-600" />
+                <span className="truncate font-medium text-ink-800">{vehicleLabel(cleanVehicle(car.vehicle))}</span>
+              </div>
+            )}
+
             <div className="mt-5 flex items-end justify-between border-t border-dashed border-slate-200 pt-4">
               <span className="text-sm font-semibold text-ink-900">Total</span>
               <span className="font-display text-3xl font-bold text-brand-700">
@@ -236,8 +306,8 @@ export default function Store() {
                 {role === "user" && chosen.length > 0 && (
                   <Field as="textarea" label="Note for the mechanic (optional)" className="mt-5" rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Car won't start, I'm near Mirpur 10" />
                 )}
-                <Button size="lg" className="mt-5 w-full" disabled={role === "user" && chosen.length === 0} loading={busy} onClick={book}>
-                  {role === "user" ? (chosen.length ? "Book now" : "Select a service") : "Log in to book"}
+                <Button size="lg" className="mt-5 w-full" disabled={role === "user" && (chosen.length === 0 || !carSupported)} loading={busy} onClick={book}>
+                  {role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : "Book now"}
                 </Button>
               </>
             )}

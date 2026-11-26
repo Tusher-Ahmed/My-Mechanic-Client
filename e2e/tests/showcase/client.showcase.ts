@@ -13,7 +13,7 @@ const pause = (page: Page, ms = 900) => page.waitForTimeout(ms);
 
 const GARAGES = [
   { shopname: "Karim Auto Works", username: "Karim Hossain", address: "Road 4, Mirpur 10", latitude: 23.8069, longitude: 90.3687, services: [["Engine diagnosis", 1200], ["Oil change", 800], ["Brake repair", 1500], ["Battery jump-start", 350]] },
-  { shopname: "Gulshan Car Care", username: "Rafiq Ahmed", address: "Gulshan 2 Circle", latitude: 23.7925, longitude: 90.4146, services: [["AC service", 2500], ["Car wash", 400], ["Wheel alignment", 900]] },
+  { shopname: "Gulshan Car Care", username: "Rafiq Ahmed", address: "Gulshan 2 Circle", latitude: 23.7925, longitude: 90.4146, vehicleTypes: ["Sedan", "Hatchback"], services: [["AC service", 2500], ["Car wash", 400], ["Wheel alignment", 900]] },
   { shopname: "Dhanmondi Motors", username: "Sumon Mia", address: "Road 27, Dhanmondi", latitude: 23.7536, longitude: 90.3762, services: [["Tyre change", 600], ["Suspension check", 1100], ["Towing", 2000]] },
 ];
 const CUSTOMER = { username: "Rahim Uddin", email: "rahim@showcase.test", phone: "01711223344", password: "secret123" };
@@ -75,6 +75,14 @@ test("client showcase", async ({ page, browser, request }) => {
   await expect(page.getByText("3 shops")).toBeVisible();
   await pause(page, 2500); // tiles + pin drop
   await shot(page, "06-map");
+  // car type filter: Gulshan Car Care only services Sedans & Hatchbacks
+  await page.getByRole("radio", { name: "SUV / Jeep" }).click();
+  await expect(page.getByText("2 shops")).toBeVisible();
+  await pause(page, 1500);
+  await shot(page, "06b-map-filter-suv");
+  await page.getByRole("radio", { name: "All cars" }).click();
+  await expect(page.getByText("3 shops")).toBeVisible();
+
   await page.getByRole("button", { name: "Use my location" }).click();
   await expect(page.getByText("sorted by distance")).toBeVisible();
   await pause(page, 1800);
@@ -88,6 +96,20 @@ test("client showcase", async ({ page, browser, request }) => {
   await pause(page, 1200);
   await shot(page, "08-store");
   await loginViaDialog(page, CUSTOMER.email, CUSTOMER.password);
+
+  // step 1: the car
+  const carCard = page.locator("#your-car");
+  await carCard.getByRole("radio", { name: "Sedan" }).click();
+  await carCard.getByLabel("Make").fill("Toyota");
+  await carCard.getByLabel("Model").fill("Axio");
+  await carCard.getByLabel(/Year/).fill("2016");
+  await carCard.getByLabel(/Number plate/).fill("Dhaka Metro-Ga 12-3456");
+  await expect(carCard.getByLabel("Save this car to my profile for next time")).toBeChecked();
+  await pause(page, 600);
+  await carCard.scrollIntoViewIfNeeded();
+  await shot(page, "08b-store-your-car");
+
+  // step 2: services
   await page.getByRole("button", { name: /Engine diagnosis/ }).click();
   await page.getByRole("button", { name: /Oil change/ }).click();
   await page.getByLabel("Note for the mechanic (optional)").fill("Car won't start, I'm near Mirpur 10 metro station");
@@ -116,6 +138,8 @@ test("client showcase", async ({ page, browser, request }) => {
   await mech.screenshot({ path: path.join(OUT, "12-mechanic-notification-panel.png") });
   await mech.keyboard.press("Escape");
   await expect(mech.getByText("Engine diagnosis").first()).toBeVisible();
+  await expect(mech.getByTestId("order-vehicle")).toContainText("Toyota Axio"); // mechanic sees the car before accepting
+  await expect(mech.getByTestId("order-vehicle")).toContainText("DHAKA METRO-GA 12-3456");
   await mech.screenshot({ path: path.join(OUT, "13-mechanic-dashboard.png") });
 
   // customer goes to their orders (pending), then mechanic accepts → customer notified live
@@ -138,6 +162,12 @@ test("client showcase", async ({ page, browser, request }) => {
   await pause(page, 700);
   await shot(page, "17-customer-notification-panel");
   await page.keyboard.press("Escape");
+
+  // the car was saved to the customer's profile
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await expect(page.getByText("Toyota Axio")).toBeVisible();
+  await pause(page, 800);
+  await shot(page, "17b-customer-my-cars");
 
   // 5. Mechanic shop editor + registration wizard + other pages
   await mech.getByRole("tab", { name: "My shop" }).click();

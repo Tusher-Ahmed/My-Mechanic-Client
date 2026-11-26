@@ -61,10 +61,17 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const refreshMe = useCallback(async () => {
+    const { data } = await api.get("/auth/me");
+    setSession(data);
+    return data;
+  }, []);
+
   const value = useMemo(
     () => ({
       ...session,
       loading,
+      refreshMe,
       isUser: session.role === "user",
       isMechanic: session.role === "mechanic",
       login,
@@ -75,7 +82,7 @@ export function AuthProvider({ children }) {
       openAuth: (mode = "login", role = "user") => setDialog({ mode, role }),
       closeAuth: () => setDialog(null),
     }),
-    [session, loading, login, register, logout, updateProfile, dialog]
+    [session, loading, refreshMe, login, register, logout, updateProfile, dialog]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

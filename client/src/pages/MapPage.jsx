@@ -9,6 +9,8 @@ import { DEFAULT_CENTER, MAP_STYLE, useGeolocation } from "../lib/map";
 import { distanceKm, km, minPrice, money } from "../lib/format";
 import { GearLoader } from "../components/mech";
 import { Button } from "../components/ui";
+import { CarTypeChooser } from "../components/VehiclePicker";
+import { getPreferredCarType, setPreferredCarType } from "../data/vehicles";
 import { ease, fadeUp, stagger } from "../lib/motion";
 
 function useDebounced(value, ms = 300) {
@@ -75,6 +77,11 @@ export default function MapPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const q = useDebounced(query);
+  const [carType, setCarType] = useState(getPreferredCarType);
+  const chooseCarType = (t) => {
+    setCarType(t);
+    setPreferredCarType(t);
+  };
   const { position, status, locate, setPosition } = useGeolocation();
   const mapRef = useRef(null);
   const listRef = useRef(null);
@@ -82,13 +89,13 @@ export default function MapPage() {
   useEffect(() => {
     let cancelled = false;
     api
-      .get("/mechanics", { params: q ? { q } : {} })
+      .get("/mechanics", { params: { ...(q && { q }), ...(carType && { vehicleType: carType }) } })
       .then(({ data }) => !cancelled && (setShops(data), setError("")))
       .catch((err) => !cancelled && setError(errorMessage(err)));
     return () => {
       cancelled = true;
     };
-  }, [q]);
+  }, [q, carType]);
 
   const sorted = useMemo(() => {
     if (!shops) return [];
@@ -148,6 +155,10 @@ export default function MapPage() {
             </Button>
           </div>
           {status === "denied" && <p className="text-xs text-rose-600">Location permission was denied. Enable it in your browser to sort by distance.</p>}
+          <div>
+            <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">My car type</p>
+            <CarTypeChooser value={carType} onChange={chooseCarType} allowAll size="sm" />
+          </div>
         </div>
 
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -162,9 +173,18 @@ export default function MapPage() {
               <span className="grid size-14 place-items-center rounded-2xl bg-white text-slate-400 ring-1 ring-slate-200">
                 <Wrench className="size-6" />
               </span>
-              <p className="mt-4 font-semibold text-ink-900">{q ? `No shops match "${q}"` : "No mechanics registered yet"}</p>
-              <p className="mt-1 text-sm text-slate-500">{q ? "Try another service name." : "Are you a mechanic? Be the first on the map!"}</p>
-              {!q && (
+              <p className="mt-4 font-semibold text-ink-900">
+                {q ? `No shops match "${q}"` : carType ? `No garages for ${carType} cars yet` : "No mechanics registered yet"}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {q ? "Try another service name." : carType ? "Try “All cars” to see every garage." : "Are you a mechanic? Be the first on the map!"}
+              </p>
+              {carType && (
+                <Button size="sm" variant="secondary" className="mt-5" onClick={() => chooseCarType("")}>
+                  Show all garages
+                </Button>
+              )}
+              {!q && !carType && (
                 <Button to="/mechanic/register" size="sm" className="mt-5">
                   Register your garage
                 </Button>

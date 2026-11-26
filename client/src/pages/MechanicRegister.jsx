@@ -8,6 +8,8 @@ import { errorMessage } from "../lib/api";
 import LocationPicker from "../components/LocationPicker";
 import ServiceEditor from "../components/ServiceEditor";
 import { Gear } from "../components/mech";
+import { CarTypeChooser } from "../components/VehiclePicker";
+import { VEHICLE_TYPES } from "../data/vehicles";
 import { Button, EmptyState, Field } from "../components/ui";
 import { ease, easeExit, shake } from "../lib/motion";
 
@@ -27,6 +29,7 @@ function validate(step, f) {
     if (f.password.length < 6) return "Password must be at least 6 characters.";
   }
   if (step === 1 && f.shopname.trim().length < 3) return "Shop name must be at least 3 characters.";
+  if (step === 1 && f.vehicleTypes.length === 0) return "Select at least one car type you service.";
   if (step === 2 && (f.location.latitude === "" || f.location.longitude === "" || f.location.latitude == null)) return "Please set your shop's location on the map.";
   if (step === 3 && f.services.length === 0) return "Add at least one service with a price.";
   return "";
@@ -50,6 +53,7 @@ export default function MechanicRegister() {
     address: "",
     location: { latitude: "", longitude: "" },
     services: [],
+    vehicleTypes: [...VEHICLE_TYPES],
   });
   const set = (e) => setF((x) => ({ ...x, [e.target.name]: e.target.value }));
 
@@ -154,6 +158,11 @@ export default function MechanicRegister() {
                 <div className="grid gap-4">
                   <Field label="Shop name" name="shopname" value={f.shopname} onChange={set} placeholder="e.g. Karim Auto Works" />
                   <Field label="Address / area (optional)" name="address" value={f.address} onChange={set} placeholder="e.g. Road 4, Mirpur 10, Dhaka" />
+                  <div>
+                    <span className="label">Car types you service</span>
+                    <CarTypeChooser multiple value={f.vehicleTypes} onChange={(vehicleTypes) => setF((x) => ({ ...x, vehicleTypes }))} size="sm" />
+                    <p className="mt-1.5 text-xs text-slate-500">Customers filter the map by car type. You can change this later.</p>
+                  </div>
                 </div>
               )}
               {step === 2 && (
