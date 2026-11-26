@@ -131,7 +131,21 @@ export const updateMe = {
 };
 
 /* ---------- orders / messages / notifications ---------- */
+const geoPoint = z.object({
+  latitude: z.number({ error: "Latitude must be a number" }).min(-90).max(90),
+  longitude: z.number({ error: "Longitude must be a number" }).min(-180).max(180),
+  accuracy: z.number().min(0).max(100_000).optional(),
+});
+
+/** Customer live location update: either a position, or { share: false } to stop sharing. */
+export const locationUpdate = z.union([
+  z.object({ share: z.literal(false) }),
+  geoPoint.extend({ share: z.literal(true).optional() }),
+]);
+
 export const createOrder = z.object({
+  shareLocation: z.boolean().optional(),
+  location: geoPoint.optional(),
   mechanicId: objectId("shop"),
   serviceIds: z.array(objectId("service")).min(1, "Choose at least one service").max(50),
   vehicle,

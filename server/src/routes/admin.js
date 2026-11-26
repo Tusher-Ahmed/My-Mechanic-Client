@@ -73,9 +73,10 @@ router.get("/orders", validate({ query: S.ordersQuery }), async (req, res) => {
 });
 
 router.patch("/orders/:id/status", validate({ params: S.idParams, body: S.orderStatus }), async (req, res) => {
+  const { status } = req.valid.body;
   const order = await Order.findByIdAndUpdate(
     req.valid.params.id,
-    { status: req.valid.body.status },
+    status === "completed" || status === "cancelled" ? { status, $unset: { customerLocation: 1 } } : { status },
     { new: true, runValidators: true }
   );
   if (!order) throw notFound("Order not found");

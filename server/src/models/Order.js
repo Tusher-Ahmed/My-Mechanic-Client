@@ -15,6 +15,21 @@ const OrderSchema = new Schema(
     },
     totalPrice: { type: Number, required: true, min: 0 },
     vehicle: { type: VehicleSchema, required: [true, "Tell us which car needs service"] },
+    // live location: only with the customer's consent, only revealed to the mechanic after acceptance,
+    // deleted when the job is completed or cancelled
+    shareLocation: { type: Boolean, default: false },
+    customerLocation: {
+      type: new Schema(
+        {
+          latitude: { type: Number, min: -90, max: 90, required: true },
+          longitude: { type: Number, min: -180, max: 180, required: true },
+          accuracy: { type: Number, min: 0 },
+          updatedAt: { type: Date, required: true },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
     note: { type: String, trim: true, maxlength: 500 },
     status: { type: String, enum: ORDER_STATUSES, default: "pending" },
   },

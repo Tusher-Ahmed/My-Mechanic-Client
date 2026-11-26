@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, ClipboardList, MapPinned, Navigation, ShoppingCart, Store as StoreIcon, UserRound, Wrench } from "lucide-react";
 import { api, errorMessage } from "../lib/api";
-import { googleMapsUrl } from "../lib/map";
+import { getPositionOnce, googleMapsUrl } from "../lib/map";
 import { money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { Car, Gear, GearLoader } from "../components/mech";
@@ -94,6 +94,7 @@ export default function Store() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [placed, setPlaced] = useState(false);
+  const [shareLocation, setShareLocation] = useState(true);
   const savedCars = role === "user" ? (account?.vehicles ?? []) : [];
   const [car, setCar] = useState({ vehicle: { ...emptyVehicle, type: getPreferredCarType() }, save: true });
 
@@ -128,7 +129,11 @@ export default function Store() {
     }
     setBusy(true);
     try {
+      const location = shareLocation ? await getPositionOnce() : null;
+      if (shareLocation && !location) toast("We couldn't get your location – you can allow it later and sharing will start automatically.");
       await api.post("/orders", {
+        shareLocation,
+        ...(location ? { location } : {}),
         mechanicId: shop._id,
         serviceIds: selected,
         vehicle: cleanVehicle(car.vehicle),
@@ -136,6 +141,7 @@ export default function Store() {
         note: note.trim() || undefined,
       });
       if (car.save) refreshMe().catch(() => {});
+      window.dispatchEvent(new Event("mm:orders-changed")); // starts live location sharing if enabled
       setPlaced(true);
       setSelected([]);
       setNote("");
@@ -301,6 +307,15 @@ export default function Store() {
               <>
                 {role === "user" && chosen.length > 0 && (
                   <Field as="textarea" label="Note for the mechanic (optional)" className="mt-5" rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Car won't start, I'm near Mirpur 10" />
+                )}
+                {role === "user" && chosen.length > 0 && (
+                  <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-brand-50/60 p-3 text-sm text-ink-800 ring-1 ring-brand-100">
+                    <input type="checkbox" className="mt-0.5 size-4 shrink-0 rounded accent-brand-600" checked={shareLocation} onChange={(e) => setShareLocation(e.target.checked)} />
+                    <span>
+                      <span className="font-semibold">Share my live location with the mechanic</span>
+                      <span className="block text-xs text-slate-500">Only after they accept, only while this site is open. Stops automatically when the job is done.</span>
+                    </span>
+                  </label>
                 )}
                 <Button size="lg" className="mt-5 w-full" disabled={role === "user" && (chosen.length === 0 || !carSupported)} loading={busy} onClick={book}>
                   {role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : "Book now"}

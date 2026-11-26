@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Github, Facebook, Linkedin, LogOut, Menu, X, LayoutDashboard, ClipboardList, Wrench, Mail, MapPin } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Avatar, Button } from "./ui";
-import { gearPath } from "./mech";
+import { PageLoader, gearPath } from "./mech";
 import AuthDialog from "./AuthDialog";
 import NotificationBell from "./NotificationBell";
+import LiveLocationSharer from "./LiveLocationSharer";
 import { dur, ease, easeExit } from "../lib/motion";
 
 export function Logo({ dark = false }) {
@@ -239,11 +240,15 @@ export default function Layout() {
           animate={{ opacity: 1, y: 0, transition: { duration: dur.slow, ease } }}
           exit={{ opacity: 0, transition: { duration: 0.15, ease: easeExit } }}
         >
-          <Outlet />
+          {/* lazy pages suspend here, inside the page – never hiding the layout mid-animation */}
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </motion.main>
       </AnimatePresence>
       {!fullBleed && <Footer />}
       <AuthDialog />
+      <LiveLocationSharer />
     </div>
   );
 }

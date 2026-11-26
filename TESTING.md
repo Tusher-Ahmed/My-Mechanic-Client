@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 76 tests
+## 1. API tests (`e2e/tests/api`) – 84 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -277,11 +277,23 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-SEC-14 | Missing security headers / `x-powered-by` | helmet headers present | ✅ |
 | API-SEC-15 | Error responses leaking stack traces | none | ✅ |
 
+### Live location – `location.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-LOC-01 | Hidden from the mechanic until they accept; customer sees their own | ✅ |
+| API-LOC-02 | Without consent nothing is stored or shown | ✅ |
+| API-LOC-03 | Live updates reach the mechanic instantly over the stream | ✅ |
+| API-LOC-04 | Only the customer who placed the order can update it (403 / 401) | ✅ |
+| API-LOC-05 | Customer can stop sharing (and restart) | ✅ |
+| API-LOC-06 | Completing / cancelling deletes the location and ends sharing | ✅ |
+| API-LOC-07 | Coordinates validated | ✅ |
+| API-LOC-08 | Admins see whether sharing is on, never the coordinates | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
 
-`npm run showcase` seeds 3 garages in Dhaka + a customer, then drives a visible browser through the app and saves
+`npm run showcase` builds the client + admin for production, seeds 3 garages in Dhaka + a customer, then drives a visible browser through the app and saves
 screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also asserts the key steps:
 
 | Step | Checked | Status |
@@ -290,6 +302,7 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 | Map lists 3 shops, "My car type" filter (SUV → 2 shops), "Near me" sorts by distance, pin → popup | ✅ 06–07 | ✅ |
 | Guest logs in, enters the car (type, make, model, year, plate), selects services, total updates, books | ✅ 08–10 | ✅ |
 | Mechanic receives the order **live** (badge, toast, dashboard) and sees the car + plate | ✅ 11–13 | ✅ |
+| Mechanic accepts → live map of the customer, pin follows when the customer moves ~1 km (15b–15d) | ✅ 15b–15d | ✅ |
 | Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown; car saved in "My cars" | ✅ 14–17b | ✅ |
 | Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |
 | Phone width (390px): home, menu, map – no horizontal scroll | ✅ 23–25 | ✅ |

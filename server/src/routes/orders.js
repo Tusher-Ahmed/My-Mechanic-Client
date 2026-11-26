@@ -6,7 +6,7 @@ import { sameVehicle } from "../models/vehicle.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
-import { orderEvents } from "../services/notifications.js";
+import { orderEvents, publish } from "../services/notifications.js";
 import * as S from "../validation/schemas.js";
 
 const router = Router();
@@ -14,6 +14,9 @@ const router = Router();
 /** Contact details (email/phone) are only shared once the mechanic has accepted the order. */
 export function shapeOrder(order, viewerRole) {
   const o = order.toJSON();
+  // exact location: the customer always sees their own; the mechanic only while the job is accepted; admins never
+  const showLocation = viewerRole === "user" || (viewerRole === "mechanic" && o.status === "accepted" && o.shareLocation);
+  if (!showLocation) delete o.customerLocation;
   const shareContact = viewerRole === "admin" || o.status === "accepted" || o.status === "completed";
   if (!shareContact) {
     if (o.user && typeof o.user === "object") o.user = { _id: o.user._id, username: o.user.username };
@@ -31,7 +34,7 @@ export const populateParties = (query) =>
 
 // POST /api/orders  { mechanicId, serviceIds: [], vehicle: {type, make, model, year?, plate?}, saveVehicle?, note? }
 router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (req, res) => {
-  const { mechanicId, serviceIds, vehicle, saveVehicle, note } = req.valid.body;
+  const { mechanicId, serviceIds, vehicle, saveVehicle, note, shareLocation = false, location } = req.valid.body;
 
   const mechanic = await Mechanic.findById(mechanicId);
   if (!mechanic) throw notFound("Shop not found");
@@ -55,6 +58,8 @@ router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (
     totalPrice,
     vehicle,
     note,
+    shareLocation,
+    customerLocation: shareLocation && location ? { ...location, updatedAt: new Date() } : undefined,
   });
 
   // optionally remember the car on the user's profile (newest first, max 5)
@@ -67,7 +72,38 @@ router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (
   }
 
   await orderEvents.created(await populateParties(Order.findById(order._id)));
-  res.status(201).json(order);
+  res.status(201).json(shapeOrder(order, "user"));
+});
+
+// PATCH /api/orders/:id/location  – customer shares / updates / stops their live location
+//   { latitude, longitude, accuracy? }  or  { share: false }
+router.patch("/:id/location", requireAuth("user"), validate({ params: S.idParams, body: S.locationUpdate }), async (req, res) => {
+  const order = await Order.findById(req.valid.params.id);
+  if (!order) throw notFound("Order not found");
+  if (order.user.toString() !== req.auth.id) throw forbidden();
+  if (order.status !== "pending" && order.status !== "accepted") {
+    throw badRequest("Location sharing has ended for this order");
+  }
+
+  const body = req.valid.body;
+  if (body.share === false) {
+    order.shareLocation = false;
+    order.customerLocation = undefined;
+  } else {
+    order.shareLocation = true;
+    order.customerLocation = { latitude: body.latitude, longitude: body.longitude, accuracy: body.accuracy, updatedAt: new Date() };
+  }
+  await order.save();
+
+  // live push to the mechanic – only once they've accepted the job
+  if (order.status === "accepted") {
+    publish("mechanic", order.mechanic.toString(), "order:location", {
+      orderId: order._id,
+      shareLocation: order.shareLocation,
+      customerLocation: order.shareLocation ? order.customerLocation : null,
+    });
+  }
+  res.json({ _id: order._id, shareLocation: order.shareLocation, customerLocation: order.customerLocation ?? null });
 });
 
 // GET /api/orders/mine  – orders placed by this user / received by this mechanic
@@ -94,6 +130,7 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: 
   if (!allowed.includes(next)) throw badRequest(`Can't change a ${order.status} order to ${next}`);
 
   order.status = next;
+  if (next === "completed" || next === "cancelled") order.customerLocation = undefined; // stop + delete location
   await order.save();
   const populated = await populateParties(Order.findById(order._id));
   await orderEvents.statusChanged(populated, role);

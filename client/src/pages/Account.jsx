@@ -26,6 +26,15 @@ export function useMyOrders() {
   }, [load]);
   // refresh automatically when a notification about an order arrives
   useNotificationEvents((n) => n.type?.startsWith("order_") && load());
+  // live customer location (mechanic side)
+  useEffect(() => {
+    const onLocation = (e) => {
+      const { orderId, shareLocation, customerLocation } = e.detail;
+      setOrders((list) => list?.map((o) => (o._id === orderId ? { ...o, shareLocation, customerLocation: customerLocation ?? undefined } : o)));
+    };
+    window.addEventListener("mm:order-location", onLocation);
+    return () => window.removeEventListener("mm:order-location", onLocation);
+  }, []);
 
   const setStatus = async (order, status) => {
     try {

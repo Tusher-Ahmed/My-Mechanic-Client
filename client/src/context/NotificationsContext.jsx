@@ -56,6 +56,11 @@ export function NotificationsProvider({ children }) {
         attempt = 0;
       });
 
+      // customer live location (mechanics only) – pages update their own state
+      source.addEventListener("order:location", (e) => {
+        window.dispatchEvent(new CustomEvent("mm:order-location", { detail: JSON.parse(e.data) }));
+      });
+
       source.addEventListener("notification", (e) => {
         const n = JSON.parse(e.data);
         setItems((list) => [n, ...list.filter((x) => x._id !== n._id)].slice(0, 30));

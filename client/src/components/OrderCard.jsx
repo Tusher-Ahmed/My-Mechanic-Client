@@ -1,13 +1,39 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Calendar, Mail, MessageSquareText, Phone, Store, UserRound } from "lucide-react";
+import { Calendar, Mail, MapPin, MessageSquareText, Phone, Store, UserRound } from "lucide-react";
 import { Link } from "react-router";
+import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "./ui";
 import { CarTypeIcon } from "./VehiclePicker";
 import { date, money } from "../lib/format";
 import { fadeUp } from "../lib/motion";
 
 /** One order. `viewer` = "user" (sees the shop) or "mechanic" (sees the customer). */
+// The map library is only downloaded when a mechanic actually has a live location to show.
+// Loaded with a plain dynamic import (not React.lazy): suspending inside the page-transition
+// animation left the whole page stuck at opacity 0.
+let mapModule = null;
+function useCustomerLocationMap(needed) {
+  const [Comp, setComp] = useState(() => mapModule);
+  useEffect(() => {
+    if (!needed || Comp) return;
+    let alive = true;
+    import("./CustomerLocationMap").then((m) => {
+      mapModule = m.default;
+      if (alive) setComp(() => m.default);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [needed, Comp]);
+  return Comp;
+}
+
 export default function OrderCard({ order, viewer, actions }) {
+  const { account } = useAuth();
+  const shop = viewer === "mechanic" ? { latitude: account?.latitude, longitude: account?.longitude } : null;
+  const showLiveMap = viewer === "mechanic" && order.status === "accepted" && order.shareLocation && !!order.customerLocation;
+  const CustomerLocationMap = useCustomerLocationMap(showLiveMap);
   const other = viewer === "user" ? order.mechanic : order.user;
   const hasContact = !!other?.phone;
 
@@ -93,6 +119,30 @@ export default function OrderCard({ order, viewer, actions }) {
           {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
+
+      {/* live customer location */}
+      {viewer === "mechanic" && order.status === "accepted" && order.shareLocation && (
+        <div className="border-t border-slate-100 p-5 pt-4">
+          <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-ink-900">
+            <MapPin className="size-4 text-emerald-600" /> Customer's live location
+          </p>
+          {order.customerLocation ? (
+            CustomerLocationMap ? (
+              <CustomerLocationMap location={order.customerLocation} shop={shop} />
+            ) : (
+              <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
+            )
+          ) : (
+            <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 ring-1 ring-slate-100">Waiting for the customer's device to send its location…</p>
+          )}
+        </div>
+      )}
+      {viewer === "user" && order.shareLocation && (order.status === "pending" || order.status === "accepted") && (
+        <p className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          <MapPin className="size-3.5 text-emerald-600" />
+          {order.status === "accepted" ? "Your live location is shared with the mechanic while this site is open." : "Your location will be shared once the mechanic accepts."}
+        </p>
+      )}
     </motion.article>
   );
 }

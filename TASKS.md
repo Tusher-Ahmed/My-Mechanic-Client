@@ -50,7 +50,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (76 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (84 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
@@ -77,7 +77,18 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase D – Requested improvements
 - [x] D.1 Car type picker: searchable dropdown (single + multi select, keyboard, portal) instead of chip rows
-- [ ] D.2 Live customer location shared with the mechanic after acceptance (consent, auto-stop, live map)
+- [x] D.2 Live customer location shared with the mechanic after acceptance (consent, auto-stop, live map, Navigate) – 8 API tests + showcase
+- [x] D.3 Showcases run against production builds; fix blank page after refreshing a lazy page (Suspense inside layout) + regression test
+
+## Phase P – Mechanic subscriptions (business model) – SSLCommerz sandbox (demo checkout fallback when no keys)
+- [ ] P.1 Plans: monthly + yearly, low introductory first period, loyal-customer renewal discount (admin-editable)
+- [ ] P.2 Choose a plan during mechanic registration → demo checkout → subscription active
+- [ ] P.3 Only garages with an active subscription appear on the map / can receive orders
+- [ ] P.4 Expiry reminders (7 days, 1 day), renew screen with returning-customer discount
+- [ ] P.5 Admin "Revenue" page: subscription income per month / plan, new vs renewals, active + expiring garages; plan prices
+- [ ] P.7 Mechanic dashboard: own orders + revenue over time (monthly charts)
+- [ ] P.8 Payment: SSLCommerz sandbox with server-side validation; demo checkout when SSLCZ keys are not set
+- [ ] P.6 API tests + showcase
 
 ## Phase 5 – Deployment prep
 - [ ] 5.1 `render.yaml` for the backend; `vercel.json` (SPA routing) for client and admin

@@ -72,19 +72,20 @@ export default defineConfig({
     ...(needsClient
       ? [
           {
-            command: `npx vite --port ${CLIENT_PORT} --strictPort`,
+            // production build + preview: tests exactly what gets deployed, no dev-server reloads
+            command: `npx vite build --logLevel warn && npx vite preview --port ${CLIENT_PORT} --strictPort`,
             cwd: "../client",
             url: CLIENT_URL,
             reuseExistingServer: false,
-            timeout: 60_000,
+            timeout: 120_000,
             env: { VITE_API_URL: API_URL },
           },
           {
-            command: `npx vite --port ${ADMIN_PORT} --strictPort`,
+            command: `npx vite build --logLevel warn && npx vite preview --port ${ADMIN_PORT} --strictPort`,
             cwd: "../admin",
             url: ADMIN_URL,
             reuseExistingServer: false,
-            timeout: 60_000,
+            timeout: 120_000,
             env: { VITE_API_URL: API_URL, VITE_CLIENT_URL: CLIENT_URL },
           },
         ]

@@ -168,6 +168,21 @@ test("client showcase", async ({ page, browser, request }) => {
   await pause(mech, 800);
   await mech.screenshot({ path: path.join(OUT, "15-mechanic-accepted.png") });
 
+  // live location: the customer agreed at booking → after accepting, the mechanic sees a live map
+  const live = mech.getByTestId("customer-location");
+  await expect(live).toBeVisible({ timeout: 15_000 });
+  await expect(live).toHaveAttribute("data-lat", /^23.79/);
+  await expect(page.getByTestId("location-sharing")).toContainText("Sharing live location with Karim Auto Works", { timeout: 15_000 });
+  await live.scrollIntoViewIfNeeded();
+  await pause(mech, 2500);
+  await mech.screenshot({ path: path.join(OUT, "15b-mechanic-live-location.png") });
+  // the customer moves ~1 km → the pin on the mechanic's map follows within seconds
+  await page.context().setGeolocation({ latitude: 23.8031, longitude: 90.4132 });
+  await expect(live).toHaveAttribute("data-lat", /^23.803/, { timeout: 20_000 });
+  await pause(mech, 1500);
+  await mech.screenshot({ path: path.join(OUT, "15c-mechanic-location-moved.png") });
+  await shot(page, "15d-customer-sharing-pill");
+
   await expect(page.getByTestId("notification-count").filter({ visible: true })).toHaveText("1", { timeout: 15_000 });
   await expect(page.getByText(karim.account.phone)).toBeVisible(); // list refreshed live, mechanic phone shown
   await pause(page, 900);

@@ -21,7 +21,7 @@ export function sendEvent(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-function publish(role, id, event, data) {
+export function publish(role, id, event, data) {
   for (const res of subscribers.get(key(role, id)) ?? []) sendEvent(res, event, data);
 }
 
