@@ -96,7 +96,7 @@ async function seed(request: APIRequestContext) {
       await request.post(`${API_URL}/orders/${order._id}/verify`, { data: { code }, headers: h });
       await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "completed" }, headers: h });
     }
-    if (status === "cancelled") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "cancelled" }, headers: h });
+    if (status === "cancelled") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, headers: h });
   }
   await post("messages", { email: "rafi@example.com", subject: "Can I book for my motorbike?", message: "Hi! Do you also support motorbikes? My bike broke down near Farmgate.\n\nThanks, Rafi" });
   await post("messages", { email: "garage.owner@example.com", subject: "Partnership", message: "I own three garages in Chattogram and would like to join the platform." });

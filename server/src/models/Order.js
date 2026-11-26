@@ -32,6 +32,18 @@ const OrderSchema = new Schema(
     verifyAttempts: { type: Number, default: 0 },
     verifyLockedUntil: { type: Date },
     verifiedAt: { type: Date },
+    // who cancelled / declined and why (required from customers and mechanics)
+    cancellation: {
+      type: new Schema(
+        {
+          by: { type: String, enum: ["user", "mechanic", "admin"], required: true },
+          reason: { type: String, trim: true, maxlength: 300 },
+          at: { type: Date, required: true },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
     // live location: only with the customer's consent, only revealed to the mechanic after acceptance,
     // deleted when the job is completed or cancelled
     shareLocation: { type: Boolean, default: false },

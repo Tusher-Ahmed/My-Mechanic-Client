@@ -93,7 +93,7 @@ test.describe("Order status flow", () => {
   test("API-ORD-07 user can cancel only while pending", async ({ request }) => {
     const { user, mech, order } = await createOrderFixture(request);
     const cancel = await request.patch(`orders/${order._id}/status`, {
-      data: { status: "cancelled" },
+      data: { status: "cancelled", reason: "Test cancellation" },
       ...auth(user.session.token),
     });
     expect((await cancel.json()).status).toBe("cancelled");
@@ -104,7 +104,7 @@ test.describe("Order status flow", () => {
       ...auth(second.mech.session.token),
     });
     const late = await request.patch(`orders/${second.order._id}/status`, {
-      data: { status: "cancelled" },
+      data: { status: "cancelled", reason: "Test cancellation" },
       ...auth(second.user.session.token),
     });
     expect(late.status()).toBe(400);
@@ -121,7 +121,7 @@ test.describe("Order status flow", () => {
 
     const stranger = await registerUser(request);
     const res = await request.patch(`orders/${order._id}/status`, {
-      data: { status: "cancelled" },
+      data: { status: "cancelled", reason: "Test cancellation" },
       ...auth(stranger.session.token),
     });
     expect(res.status()).toBe(403);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowRight, Banknote, ClipboardList, Mail, RefreshCw, Users, Wrench } from "lucide-react";
+import { ArrowRight, Banknote, ClipboardList, Mail, RefreshCw, Truck, Users, Wrench } from "lucide-react";
 import { api } from "../lib/api";
 import { date, money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
@@ -44,6 +44,7 @@ function Panel({ title, subtitle, action, children, className = "" }) {
 }
 
 const STATUS_ORDER = ["pending", "accepted", "completed", "cancelled"];
+const short = (n) => (n >= 1000 ? `৳${(n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : `৳${n}`);
 
 export default function Dashboard() {
   const { admin } = useAuth();
@@ -87,27 +88,29 @@ export default function Dashboard() {
       />
 
       <motion.div initial="hidden" animate="show" variants={stagger(0.06)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <div className="col-span-2 lg:col-span-1">
-            <Tile icon={Banknote} label="Revenue (accepted + completed)" value={stats?.revenue} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
-          </div>
-          <Tile icon={ClipboardList} label="Orders" value={stats?.orders} hint={pending ? `${pending} waiting for a mechanic` : undefined} to="/orders" tone="bg-sky-50 text-sky-600" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <Tile icon={Banknote} label="Service revenue" value={stats?.serviceRevenue} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
+          <Tile icon={Truck} label="Travel charges" value={stats?.travelRevenue} format={(n) => money(n)} tone="bg-sky-50 text-sky-600" />
+          <Tile icon={ClipboardList} label="Orders" value={stats?.orders} hint={pending ? `${pending} waiting for a mechanic` : undefined} to="/orders" tone="bg-indigo-50 text-indigo-600" />
           <Tile icon={Wrench} label="Mechanics" value={stats?.mechanics} to="/mechanics" tone="bg-amber-50 text-amber-600" />
           <Tile icon={Users} label="Customers" value={stats?.users} to="/users" tone="bg-violet-50 text-violet-600" />
           <Tile icon={Mail} label="Messages" value={stats?.messages} to="/messages" tone="bg-rose-50 text-rose-600" />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           <Panel title="Orders" subtitle="Orders placed per month · last 6 months">
             {stats ? <ColumnChart title="Orders per month" data={stats.months.map((m) => ({ label: m.month, value: m.orders }))} /> : <div className="h-[200px] animate-pulse rounded-xl bg-slate-100" />}
           </Panel>
-          <Panel title="Revenue" subtitle="Accepted + completed order value per month (৳)">
+          <Panel title="Service revenue" subtitle="Services on accepted + completed orders (৳) · cancelled never count">
             {stats ? (
-              <ColumnChart
-                title="Revenue per month"
-                data={stats.months.map((m) => ({ label: m.month, value: m.revenue }))}
-                format={(n) => (n >= 1000 ? `৳${(n / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : `৳${n}`)}
-              />
+              <ColumnChart title="Service revenue per month" data={stats.months.map((m) => ({ label: m.month, value: m.serviceRevenue }))} format={short} />
+            ) : (
+              <div className="h-[200px] animate-pulse rounded-xl bg-slate-100" />
+            )}
+          </Panel>
+          <Panel title="Travel charges" subtitle="Transport for home-service jobs (৳) · reported separately">
+            {stats ? (
+              <ColumnChart title="Travel charges per month" data={stats.months.map((m) => ({ label: m.month, value: m.travelRevenue }))} format={short} />
             ) : (
               <div className="h-[200px] animate-pulse rounded-xl bg-slate-100" />
             )}
@@ -127,7 +130,7 @@ export default function Dashboard() {
           </Panel>
           <Panel title="Top garages" subtitle="By number of orders">
             {stats ? (
-              <BarList items={stats.topShops.map((s) => ({ label: s.shopname, value: s.orders, hint: money(s.revenue) }))} empty="No orders yet." />
+              <BarList items={stats.topShops.map((s) => ({ label: s.shopname, value: s.orders, hint: `${money(s.serviceRevenue)} services · ${money(s.travelRevenue)} travel` }))} empty="No orders yet." />
             ) : (
               <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
             )}

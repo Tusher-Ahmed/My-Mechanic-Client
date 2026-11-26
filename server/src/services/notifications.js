@@ -81,8 +81,22 @@ export const orderEvents = {
         toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
         break;
       case "cancelled":
-        if (by !== "user") toUser("order_cancelled", `${order.shopname} declined your order`, "Try another mechanic nearby on the map.");
-        if (by !== "mechanic") toMechanic("order_cancelled", `${order.user.username} cancelled an order`, list(order.services));
+        {
+          const why = order.cancellation?.reason ? `Reason: ${order.cancellation.reason}.` : "";
+          const declined = by === "mechanic" && !order.verifiedAt && !order.eta;
+          if (by !== "user")
+            toUser(
+              "order_cancelled",
+              by === "admin" ? `${ref(order)} was cancelled by My Mechanic` : `${order.shopname} ${declined ? "declined" : "cancelled"} ${ref(order)}`,
+              [why, "Try another mechanic nearby on the map."].filter(Boolean).join(" ")
+            );
+          if (by !== "mechanic")
+            toMechanic(
+              "order_cancelled",
+              by === "admin" ? `${ref(order)} was cancelled by My Mechanic` : `${order.user.username} cancelled ${ref(order)}`,
+              [why, list(order.services)].filter(Boolean).join(" · ")
+            );
+        }
         break;
       default:
         if (by === "admin") {

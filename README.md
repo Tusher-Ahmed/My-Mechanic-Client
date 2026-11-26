@@ -59,6 +59,7 @@ and automated tests.
 - **Order number** (e.g. `MM-1042`), **arrival countdown** and a **4-digit code** to confirm the right mechanic arrived.
 - **Live location sharing** with the mechanic (only after they accept, only while the site is open, stops automatically).
 - **Real-time notifications** (bell + toasts) for every status change.
+- **Cancel with a reason** – the garage is told why; nothing is charged for a cancelled order.
 
 ### For mechanics / garages
 - **5-step registration** with a map location picker, services and prices, car types serviced and a plan.
@@ -66,7 +67,8 @@ and automated tests.
   accept with an **arrival time** (suggested from the distance), "running late" updates,
   **customer verification by code** on arrival, completion.
 - **Live map** of the customer's position with distance and a **Navigate** button (Google Maps directions).
-- **Own business numbers:** revenue and orders per month, what earns the most.
+- **Own business numbers:** service revenue and travel charges (kept separate), orders per month, what earns the most – cancelled jobs never count.
+- **Cancel or decline with a reason** (styled dialog with quick reasons); the customer is told who cancelled and why.
 - **Shop settings:** services, car types, location, travel pricing (base, per km, free radius, max distance).
 - **Subscription:** monthly / yearly plans, renew banner when expired, reminders before expiry.
 
@@ -235,10 +237,10 @@ No map API key is needed – maps use free OpenStreetMap data.
 All tests use **Playwright** and run against a separate test database (`my-mechanic-e2e`, wiped on every run),
 so development data is never touched. See **[TESTING.md](TESTING.md)** for every case.
 
-- **107 API tests** – authentication, orders, notifications, live location, travel charges, arrival time and
+- **112 API tests** – authentication, orders, notifications, live location, travel charges, arrival time and
   verification codes, subscriptions, admin, and **15 security tests that perform real attacks**
   (NoSQL injection, forged tokens, price manipulation, mass assignment, brute force …).
-- **6 browser walk-throughs** against the production builds – the full customer → mechanic → admin journey
+- **7 browser walk-throughs** against the production builds – the full customer → mechanic → admin journey
   (two browser windows, live notifications, GPS movement), subscriptions, a layout stress test with extreme data,
   and a page-reload regression check. Each run saves screenshots and a video.
 

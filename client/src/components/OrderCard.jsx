@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Calendar, Mail, MapPin, MessageSquareText, Phone, Store, UserRound } from "lucide-react";
+import { Calendar, Mail, MapPin, MessageSquareText, Phone, Store, UserRound, XCircle } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "./ui";
@@ -138,6 +138,25 @@ export default function OrderCard({ order, viewer, actions, onChange }) {
           {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
+
+      {order.status === "cancelled" && order.cancellation && (
+        <p className="flex items-start gap-2 border-t border-slate-100 bg-rose-50/50 px-5 py-3 text-sm text-rose-900" data-testid="cancellation">
+          <XCircle className="mt-0.5 size-4 shrink-0 text-rose-500" />
+          <span>
+            <b>
+              {order.cancellation.by === viewer
+                ? "You cancelled"
+                : order.cancellation.by === "admin"
+                  ? "Cancelled by My Mechanic"
+                  : order.cancellation.by === "mechanic"
+                    ? `${order.shopname} ${order.verifiedAt || order.eta ? "cancelled" : "declined"}`
+                    : `${order.user?.username ?? "The customer"} cancelled`}
+            </b>
+            {order.cancellation.reason && <> · {order.cancellation.reason}</>}
+            {viewer === "mechanic" && <span className="block text-xs text-rose-700/80">Not counted in your revenue.</span>}
+          </span>
+        </p>
+      )}
 
       <TripPanel order={order} viewer={viewer} onChange={onChange} />
 

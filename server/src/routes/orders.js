@@ -186,6 +186,9 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: 
   const next = req.valid.body.status;
   const allowed = TRANSITIONS[role][order.status] || [];
   if (!allowed.includes(next)) throw badRequest(`Can't change a ${order.status} order to ${next}`);
+  if (next === "cancelled" && !req.valid.body.reason) {
+    throw badRequest(role === "mechanic" && order.status === "pending" ? "Please choose a reason for declining." : "Please choose a reason for cancelling.");
+  }
   if (next === "completed" && !order.verifiedAt) {
     throw badRequest("Verify the customer's 4-digit code first – ask them for it when you arrive.");
   }
@@ -199,6 +202,7 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: 
     order.customerLocation = undefined; // stop + delete location
     order.verificationCode = undefined;
   }
+  if (next === "cancelled") order.cancellation = { by: role, reason: req.valid.body.reason, at: new Date() };
   await order.save();
   const populated = await populateParties(Order.findById(order._id));
   await orderEvents.statusChanged(populated, role);

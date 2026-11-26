@@ -76,9 +76,11 @@ router.get("/orders", validate({ query: S.ordersQuery }), async (req, res) => {
 });
 
 router.patch("/orders/:id/status", validate({ params: S.idParams, body: S.orderStatus }), async (req, res) => {
-  const { status } = req.valid.body;
+  const { status, reason } = req.valid.body;
   const update =
-    status === "completed" || status === "cancelled"
+    status === "cancelled"
+      ? { status, cancellation: { by: "admin", reason: reason ?? "Cancelled by My Mechanic support", at: new Date() }, $unset: { customerLocation: 1, verificationCode: 1 } }
+      : status === "completed"
       ? { status, $unset: { customerLocation: 1, verificationCode: 1 } }
       : status === "accepted"
         ? { status, verificationCode: String(randomInt(0, 10_000)).padStart(4, "0") } // admin override still gives the customer a code
@@ -113,29 +115,33 @@ router.get("/stats", async (_req, res) => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5, 1);
   sixMonthsAgo.setHours(0, 0, 0, 0);
 
-  const [users, mechanics, messages, byStatus, revenueAgg, monthly, topShops] = await Promise.all([
+  // money is only counted for accepted (in progress) and completed jobs – never cancelled ones.
+  // Service revenue and travel (transport) charges are always reported separately.
+  const earned = { $in: ["$status", ["accepted", "completed"]] };
+  const travel = { $ifNull: ["$travelFee", 0] };
+  const services = { $ifNull: ["$servicesTotal", { $subtract: ["$totalPrice", travel] }] };
+  const sumIfEarned = (expr) => ({ $sum: { $cond: [earned, expr, 0] } });
+
+  const [users, mechanics, messages, byStatus, totals, monthly, topShops] = await Promise.all([
     User.countDocuments(),
     Mechanic.countDocuments(),
     Message.countDocuments(),
     Order.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-    Order.aggregate([
-      { $match: { status: { $in: ["accepted", "completed"] } } },
-      { $group: { _id: null, total: { $sum: "$totalPrice" } } },
-    ]),
+    Order.aggregate([{ $group: { _id: null, serviceRevenue: sumIfEarned(services), travelRevenue: sumIfEarned(travel) } }]),
     Order.aggregate([
       { $match: { createdAt: { $gte: sixMonthsAgo } } },
       {
         $group: {
           _id: { y: { $year: "$createdAt" }, m: { $month: "$createdAt" } },
           orders: { $sum: 1 },
-          revenue: {
-            $sum: { $cond: [{ $in: ["$status", ["accepted", "completed"]] }, "$totalPrice", 0] },
-          },
+          serviceRevenue: sumIfEarned(services),
+          travelRevenue: sumIfEarned(travel),
         },
       },
     ]),
     Order.aggregate([
-      { $group: { _id: "$shopname", orders: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+      { $match: { status: { $ne: "cancelled" } } },
+      { $group: { _id: "$shopname", orders: { $sum: 1 }, serviceRevenue: sumIfEarned(services), travelRevenue: sumIfEarned(travel) } },
       { $sort: { orders: -1 } },
       { $limit: 5 },
     ]),
@@ -150,7 +156,8 @@ router.get("/stats", async (_req, res) => {
     months.push({
       month: d.toLocaleString("en-US", { month: "short" }),
       orders: hit?.orders ?? 0,
-      revenue: hit?.revenue ?? 0,
+      serviceRevenue: hit?.serviceRevenue ?? 0,
+      travelRevenue: hit?.travelRevenue ?? 0,
     });
   }
 
@@ -162,10 +169,11 @@ router.get("/stats", async (_req, res) => {
     mechanics,
     messages,
     orders: Object.values(ordersByStatus).reduce((a, b) => a + b, 0),
-    revenue: revenueAgg[0]?.total ?? 0,
+    serviceRevenue: totals[0]?.serviceRevenue ?? 0,
+    travelRevenue: totals[0]?.travelRevenue ?? 0,
     ordersByStatus,
     months,
-    topShops: topShops.map((s) => ({ shopname: s._id, orders: s.orders, revenue: s.revenue })),
+    topShops: topShops.map((t) => ({ shopname: t._id, orders: t.orders, serviceRevenue: t.serviceRevenue, travelRevenue: t.travelRevenue })),
   });
 });
 

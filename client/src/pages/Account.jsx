@@ -6,6 +6,7 @@ import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNotificationEvents } from "../context/NotificationsContext";
 import OrderCard from "../components/OrderCard";
+import CancelOrderDialog from "../components/CancelOrderDialog";
 import { MyCarsForm, PasswordForm, ProfileForm } from "../components/AccountSettings";
 import { GearLoader } from "../components/mech";
 import { Avatar, Button, EmptyState, Tabs } from "../components/ui";
@@ -76,9 +77,13 @@ export default function Account() {
   const [filter, setFilter] = useState("all");
   const { orders, setStatus, replace } = useMyOrders();
 
-  const cancel = async (order) => {
-    if (!window.confirm(`Cancel your order at ${order.shopname}?`)) return;
-    if (await setStatus(order, "cancelled")) toast.success("Order cancelled");
+  const [cancelling, setCancelling] = useState(null);
+  const cancel = (order) => setCancelling(order);
+  const confirmCancel = async (reason) => {
+    if (await setStatus(cancelling, "cancelled", { reason })) {
+      toast.success("Order cancelled – the garage has been told why");
+      setCancelling(null);
+    }
   };
 
   const shown = orders?.filter((o) => filter === "all" || o.status === filter) ?? [];
@@ -164,6 +169,7 @@ export default function Account() {
           )}
         </motion.div>
       </AnimatePresence>
+      <CancelOrderDialog order={cancelling} kind="user" onClose={() => setCancelling(null)} onConfirm={confirmCancel} />
     </div>
   );
 }

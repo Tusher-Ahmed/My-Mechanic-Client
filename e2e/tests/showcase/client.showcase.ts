@@ -262,7 +262,10 @@ test("client showcase", async ({ page, browser, request }) => {
   // 5. Mechanic shop editor + registration wizard + other pages
   // the garage's own business numbers (the completed ৳2,220 job)
   await mech.getByRole("tab", { name: "Revenue" }).click();
-  await expect(mech.getByTestId("mechanic-revenue")).toContainText("৳2,220");
+  // service revenue and travel charges are shown separately (৳2,000 services + ৳220 travel)
+  await expect(mech.getByTestId("rev-services-total")).toContainText("৳2,000");
+  await expect(mech.getByTestId("rev-travel-month")).toContainText("৳220");
+  await expect(mech.getByTestId("travel-section")).toContainText("from 1 home job");
   await pause(mech, 1500);
   await mech.screenshot({ path: path.join(OUT, "17f-mechanic-revenue.png"), fullPage: true });
 

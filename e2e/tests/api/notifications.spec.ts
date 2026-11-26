@@ -28,12 +28,12 @@ test("API-NOTIF-02 accept and complete notify the customer", async ({ request })
 
 test("API-NOTIF-03 cancel/decline notify the other party only", async ({ request }) => {
   const a = await createOrderFixture(request);
-  await request.patch(`orders/${a.order._id}/status`, { data: { status: "cancelled" }, ...auth(a.user.session.token) });
+  await request.patch(`orders/${a.order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(a.user.session.token) });
   expect((await list(request, a.mech.session.token)).items.map((n) => n.type)).toEqual(["order_cancelled", "order_new"]);
   expect((await list(request, a.user.session.token)).items).toEqual([]);
 
   const b = await createOrderFixture(request);
-  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled" }, ...auth(b.mech.session.token) });
+  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(b.mech.session.token) });
   const userNotes = (await list(request, b.user.session.token)).items;
   expect(userNotes).toHaveLength(1);
   expect(userNotes[0].title).toContain("declined");

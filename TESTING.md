@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 107 tests
+## 1. API tests (`e2e/tests/api`) – 112 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -319,6 +319,15 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-SUB-08 | Admin revenue report: totals, this month, new vs renewals, per plan, garages, recent payments | ✅ |
 | API-SUB-09 | Admin edits plan prices / discount; mechanics see new prices; invalid values rejected | ✅ |
 
+### Cancelling – `cancellation.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-CXL-01 | Cancelling / declining without a reason (or a too-short one) is refused | ✅ |
+| API-CXL-02 | Customer cancels: reason stored, shown to both sides, mechanic notified with it | ✅ |
+| API-CXL-03 | Mechanic declines (pending) or cancels after verifying – customer told which and why | ✅ |
+| API-CXL-04 | Cancelled orders never count as money earned (top garages, revenue) | ✅ |
+| API-CXL-05 | Admin can cancel; a default reason is recorded | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -342,6 +351,11 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 plans (৳99 / ৳1,499 starter) → demo checkout (Nagad, "no real money") → paid → banner gone, on the map, next renewal
 shows 20 % off → an expired garage: customers see "not taking bookings" with booking disabled, the mechanic sees
 "Your plan expired … 20 % off" + a reminder → admin Revenue page. Screenshots: `sub-*.png`. ✅
+
+**Cancel walk-through** (`cancel.showcase.ts`): styled dialog instead of the browser confirm box (asserts no native
+dialog ever opens), reason required, mechanic cancels a verified job and declines a new one, customer sees who cancelled
+and why, the cancelled job adds ৳0 to the mechanic's revenue, customer cancels with "Other" + own reason.
+Screenshots: `cancel-*.png`. ✅
 
 **Layout stress** (`layout-stress.showcase.ts`, desktop + phone): the API is faked with extreme garages –
 12 car types (incl. unknown future types), very long shop / owner / address / service names, 15 services.

@@ -165,6 +165,7 @@ export const createOrder = z.object({
 });
 export const orderStatus = z.object({
   status: z.enum(ORDER_STATUSES, { error: "Invalid status" }),
+  reason: z.preprocess(emptyToUndefined, z.string().trim().min(3, "Please give a short reason").max(300, "Reason is too long (max 300 characters)").optional()),
   etaMinutes: z.number().int().min(5, "Arrival time must be at least 5 minutes").max(480, "Arrival time can be at most 8 hours").optional(),
 });
 export const etaUpdate = z.object({

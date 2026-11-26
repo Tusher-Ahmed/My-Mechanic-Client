@@ -192,6 +192,16 @@ export default function Orders() {
               </div>
             </div>
 
+            {open.status === "cancelled" && open.cancellation && (
+              <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-rose-100" data-testid="admin-cancellation">
+                <p className="font-semibold">
+                  Cancelled by {open.cancellation.by === "user" ? "the customer" : open.cancellation.by === "mechanic" ? "the mechanic" : "an admin"} · {date(open.cancellation.at)}
+                </p>
+                {open.cancellation.reason && <p className="mt-1">{open.cancellation.reason}</p>}
+                <p className="mt-1 text-xs text-rose-700/80">Not counted in any revenue.</p>
+              </div>
+            )}
+
             {open.note && (
               <div>
                 <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">Customer note</p>

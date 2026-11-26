@@ -34,7 +34,7 @@ test.describe("Injection & malformed input", () => {
   test("API-SEC-03 invalid ids are rejected before reaching the database", async ({ request }) => {
     const { session } = await registerUser(request);
     for (const id of ["abc", "' OR 1=1 --", "000000000000000000000000z"]) {
-      const res = await request.patch(`orders/${encodeURIComponent(id)}/status`, { data: { status: "cancelled" }, ...auth(session.token) });
+      const res = await request.patch(`orders/${encodeURIComponent(id)}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(session.token) });
       expect(res.status(), id).toBe(400);
     }
   });

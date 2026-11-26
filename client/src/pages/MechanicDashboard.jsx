@@ -15,6 +15,7 @@ import ServiceEditor from "../components/ServiceEditor";
 import LocationPicker from "../components/LocationPicker";
 import { CarTypeChooser } from "../components/VehiclePicker";
 import { EtaPickerModal } from "../components/TripPanel";
+import CancelOrderDialog from "../components/CancelOrderDialog";
 import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
 
 const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
@@ -155,12 +156,21 @@ export default function MechanicDashboard() {
   };
 
   const count = (s) => orders?.filter((o) => o.status === s).length ?? 0;
-  const earned = orders?.filter((o) => o.status === "completed").reduce((sum, o) => sum + o.totalPrice, 0) ?? 0;
+  // services only – travel charges are reported separately in the Revenue tab; cancelled jobs never count
+  const earned = orders?.filter((o) => o.status === "completed").reduce((sum, o) => sum + (o.servicesTotal ?? o.totalPrice - (o.travelFee ?? 0)), 0) ?? 0;
   const shown = orders?.filter((o) => filter === "all" || o.status === filter) ?? [];
 
   const act = async (order, status, msg) => {
-    if (status === "cancelled" && !window.confirm(order.status === "pending" ? "Decline this order?" : "Cancel this accepted order?")) return;
+    if (status === "cancelled") return setCancelling(order); // ask for a reason first
     if (await setStatus(order, status)) toast.success(msg);
+  };
+  const [cancelling, setCancelling] = useState(null);
+  const confirmCancel = async (reason) => {
+    const declining = cancelling.status === "pending";
+    if (await setStatus(cancelling, "cancelled", { reason })) {
+      toast.success(declining ? "Order declined – the customer has been told why" : "Order cancelled – the customer has been told why");
+      setCancelling(null);
+    }
   };
 
   const actionsFor = (o) => {
@@ -218,7 +228,7 @@ export default function MechanicDashboard() {
         <Stat icon={Hourglass} label="New requests" value={count("pending")} tone="bg-amber-50 text-amber-600" />
         <Stat icon={Clock} label="In progress" value={count("accepted")} tone="bg-sky-50 text-sky-600" />
         <Stat icon={CheckCircle2} label="Completed" value={count("completed")} tone="bg-emerald-50 text-emerald-600" />
-        <Stat icon={Banknote} label="Earned" value={earned} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
+        <Stat icon={Banknote} label="Service revenue" value={earned} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
       </motion.div>
 
       <Tabs
@@ -271,6 +281,12 @@ export default function MechanicDashboard() {
         </motion.div>
       </AnimatePresence>
 
+      <CancelOrderDialog
+        order={cancelling}
+        kind={cancelling?.status === "pending" ? "decline" : "cancel"}
+        onClose={() => setCancelling(null)}
+        onConfirm={confirmCancel}
+      />
       <EtaPickerModal
         open={!!accepting}
         onClose={() => setAccepting(null)}
