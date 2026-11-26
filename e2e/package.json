@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=api && playwright test --project=showcase --workers=1",
     "test:api": "playwright test --project=api",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",

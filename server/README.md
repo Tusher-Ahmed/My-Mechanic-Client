@@ -1,4 +1,10 @@
-# My-Mechanic---backend
-In this folder where the database schema and model are created for "My Mechanic" project. The Author of this project is Tusher Ahmed.
-### Admin repository link - https://github.com/Tusher-Ahmed/My-Mechanic---Admin
-### Frontend repository link - https://github.com/Tusher-Ahmed/My-Mechanic-Client
+# My Mechanic – API
+
+REST API (Node.js + Express 5 + MongoDB).
+
+See the main [README](../README.md) for setup, environment variables and the API overview.
+
+```bash
+npm run dev:server   # from the repository root → http://localhost:8080/api/health
+npm run seed:admin   # create the first admin
+```
