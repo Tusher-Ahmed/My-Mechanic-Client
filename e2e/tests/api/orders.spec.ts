@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { CAR, auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
+import { CAR, auth, createOrderFixture, registerMechanic, registerUser, verifyCustomer } from "../../helpers/api";
 
 test.describe("Placing orders", () => {
   test("API-ORD-01 must be logged in as a user", async ({ request }) => {
@@ -77,6 +77,11 @@ test.describe("Order status flow", () => {
 
     const [u] = await (await request.get("orders/mine", auth(user.session.token))).json();
     expect(u.mechanic.phone).toBe(mech.body.phone);
+
+    // can't complete before the customer's code is verified on arrival
+    const early = await request.patch(`orders/${order._id}/status`, { data: { status: "completed" }, ...auth(mech.session.token) });
+    expect(early.status()).toBe(400);
+    expect((await verifyCustomer(request, user, mech, order._id)).status()).toBe(200);
 
     const done = await request.patch(`orders/${order._id}/status`, {
       data: { status: "completed" },

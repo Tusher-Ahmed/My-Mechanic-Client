@@ -36,9 +36,10 @@ export function useMyOrders() {
     return () => window.removeEventListener("mm:order-location", onLocation);
   }, []);
 
-  const setStatus = async (order, status) => {
+  const replace = (data) => setOrders((list) => list.map((o) => (o._id === data._id ? data : o)));
+  const setStatus = async (order, status, extra = {}) => {
     try {
-      const { data } = await api.patch(`/orders/${order._id}/status`, { status });
+      const { data } = await api.patch(`/orders/${order._id}/status`, { status, ...extra });
       setOrders((list) => list.map((o) => (o._id === data._id ? data : o)));
       return data;
     } catch (err) {
@@ -46,7 +47,7 @@ export function useMyOrders() {
       return null;
     }
   };
-  return { orders, setStatus, reload: load };
+  return { orders, setStatus, replace, reload: load };
 }
 
 export function FilterChips({ value, onChange, orders }) {
@@ -73,7 +74,7 @@ export default function Account() {
   const { account } = useAuth();
   const [tab, setTab] = useState("orders");
   const [filter, setFilter] = useState("all");
-  const { orders, setStatus } = useMyOrders();
+  const { orders, setStatus, replace } = useMyOrders();
 
   const cancel = async (order) => {
     if (!window.confirm(`Cancel your order at ${order.shopname}?`)) return;
@@ -139,6 +140,7 @@ export default function Account() {
                         key={o._id}
                         order={o}
                         viewer="user"
+                        onChange={replace}
                         actions={
                           o.status === "pending" && (
                             <Button variant="danger" size="sm" onClick={() => cancel(o)}>

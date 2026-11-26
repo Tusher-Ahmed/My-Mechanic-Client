@@ -123,11 +123,17 @@ test("client showcase", async ({ page, browser, request }) => {
   await carCard.scrollIntoViewIfNeeded();
   await shot(page, "08b-store-your-car");
 
-  // step 2: services
+  // step 2: how should we meet – mechanic comes to me (default) → travel charge from the real distance
+  await expect(page.getByRole("radio", { name: /Mechanic comes to me/ })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("trip-estimate")).toContainText(/You're .* away · travel charge ৳\d+/, { timeout: 15_000 });
+
+  // step 3: services
   await page.getByRole("button", { name: /Engine diagnosis/ }).click();
   await page.getByRole("button", { name: /Oil change/ }).click();
   await page.getByLabel("Note for the mechanic (optional)").fill("Car won't start, I'm near Mirpur 10 metro station");
+  await expect(page.getByTestId("cart-travel")).toContainText(/Travel charge · [\d.]+ km\s*৳\d+/);
   await pause(page, 800);
+  await page.locator("#meet").scrollIntoViewIfNeeded();
   await shot(page, "09-store-cart");
 
   // open the mechanic in a second window BEFORE booking, so we see the live notification arrive
@@ -140,6 +146,8 @@ test("client showcase", async ({ page, browser, request }) => {
 
   await page.getByRole("button", { name: "Book now" }).click();
   await expect(page.getByRole("heading", { name: "Order placed!" })).toBeVisible();
+  await expect(page.getByTestId("placed-number")).toHaveText(/^MM-\d{4,}$/);
+  const orderNumber = (await page.getByTestId("placed-number").textContent())!.trim();
   await pause(page, 2200); // car drives in, check pops
   await shot(page, "10-order-placed");
 
@@ -154,6 +162,8 @@ test("client showcase", async ({ page, browser, request }) => {
   await expect(mech.getByText("Engine diagnosis").first()).toBeVisible();
   await expect(mech.getByTestId("order-vehicle")).toContainText("Toyota Axio"); // mechanic sees the car before accepting
   await expect(mech.getByTestId("order-vehicle")).toContainText("DHAKA METRO-GA 12-3456");
+  await expect(mech.getByTestId("order-number")).toHaveText(orderNumber); // same number on both sides
+  await expect(mech.getByTestId("travel-fee")).toContainText(/Travel charge.*৳\d+/); // garage sees the travel charge too
   await mech.screenshot({ path: path.join(OUT, "13-mechanic-dashboard.png") });
 
   // before accepting: distance + approximate area only (decide early, customer privacy kept)
@@ -172,6 +182,14 @@ test("client showcase", async ({ page, browser, request }) => {
 
   mech.on("dialog", (d) => d.accept());
   await mech.getByRole("button", { name: "Accept", exact: true }).click();
+  // accepting asks for an arrival time – suggested from the distance
+  const etaDialog = mech.getByRole("dialog");
+  await expect(etaDialog.getByRole("heading", { name: "When can you be there?" })).toBeVisible();
+  await expect(etaDialog.getByRole("radio", { name: /suggested/ })).toHaveAttribute("aria-checked", "true");
+  await pause(mech, 600);
+  await mech.screenshot({ path: path.join(OUT, "14b-mechanic-eta-picker.png") });
+  await etaDialog.getByRole("radio", { name: /^30 min/ }).click();
+  await etaDialog.getByRole("button", { name: /Accept order · 30 min/ }).click();
   await expect(mech.getByText("01711223344")).toBeVisible(); // customer's phone now visible
   await pause(mech, 800);
   await mech.screenshot({ path: path.join(OUT, "15-mechanic-accepted.png") });
@@ -199,6 +217,35 @@ test("client showcase", async ({ page, browser, request }) => {
   await pause(page, 700);
   await shot(page, "17-customer-notification-panel");
   await page.keyboard.press("Escape");
+
+  // customer: countdown + the 4-digit code to tell the mechanic on arrival
+  await expect(page.getByTestId("eta")).toContainText(/Arriving in ~(29|30) min/);
+  const codeBox = page.getByTestId("verification-code");
+  await expect(codeBox).toBeVisible();
+  const code = ((await codeBox.textContent())!.match(/\d{4}/) ?? [""])[0];
+  await codeBox.scrollIntoViewIfNeeded();
+  await pause(page, 500);
+  await shot(page, "17a-customer-code-and-eta");
+
+  // mechanic arrives: a wrong code is refused (shake + attempts left), the right one verifies the customer
+  const codeInput = mech.getByLabel("Customer's 4-digit code");
+  await codeInput.scrollIntoViewIfNeeded();
+  await codeInput.fill(code === "0000" ? "1111" : "0000");
+  await mech.getByRole("button", { name: "Verify" }).click();
+  await expect(mech.getByRole("alert")).toContainText("4 attempts left");
+  await pause(mech, 500);
+  await mech.screenshot({ path: path.join(OUT, "17c-mechanic-wrong-code.png") });
+  await expect(mech.getByRole("button", { name: "Mark completed" })).toBeDisabled(); // can't finish before verifying
+  await codeInput.fill(code);
+  await mech.getByRole("button", { name: "Verify" }).click();
+  await expect(mech.getByTestId("verified")).toContainText("Customer verified");
+  await expect(page.getByTestId("verified")).toContainText("Mechanic arrived and verified", { timeout: 15_000 }); // customer updated live
+  await expect(page.getByTestId("location-sharing")).toHaveCount(0, { timeout: 15_000 }); // sharing stopped on arrival
+  await pause(mech, 600);
+  await mech.screenshot({ path: path.join(OUT, "17d-mechanic-verified.png") });
+  await mech.getByRole("button", { name: "Mark completed" }).click();
+  await expect(page.getByText("completed").first()).toBeVisible({ timeout: 15_000 });
+  await shot(page, "17e-customer-completed");
 
   // the car was saved to the customer's profile
   await page.getByRole("tab", { name: "Settings" }).click();

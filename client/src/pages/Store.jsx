@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft, Check, ClipboardList, MapPinned, Navigation, ShoppingCart, Store as StoreIcon, UserRound, Wrench } from "lucide-react";
+import { ArrowLeft, Check, ClipboardList, MapPinned, Navigation, ShoppingCart, Store as StoreIcon, UserRound, Wrench, Truck } from "lucide-react";
 import { api, errorMessage } from "../lib/api";
 import { getPositionOnce, googleMapsUrl } from "../lib/map";
+import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
+import { distanceKm, km } from "../lib/format";
 import { money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { Car, Gear, GearLoader } from "../components/mech";
@@ -43,7 +45,7 @@ function ServiceCard({ service, selected, onToggle, disabled }) {
   );
 }
 
-function OrderPlaced({ open, onClose, shopname }) {
+function OrderPlaced({ open, onClose, shopname, order }) {
   const navigate = useNavigate();
   return (
     <Modal open={open} onClose={onClose} title="Order placed">
@@ -68,6 +70,13 @@ function OrderPlaced({ open, onClose, shopname }) {
           <motion.h2 variants={fadeUp} className="mt-6 text-2xl font-bold">
             Order placed!
           </motion.h2>
+          {order?.number && (
+            <motion.p variants={fadeUp} className="mt-2">
+              <span className="rounded-lg bg-ink-900 px-2.5 py-1 font-mono text-sm font-bold tracking-wide text-white" data-testid="placed-number">
+                MM-{order.number}
+              </span>
+            </motion.p>
+          )}
           <motion.p variants={fadeUp} className="mt-2 text-slate-600">
             {shopname} has been notified. You'll get a notification – and their phone number – as soon as they accept.
           </motion.p>
@@ -94,7 +103,8 @@ export default function Store() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [placed, setPlaced] = useState(false);
-  const [shareLocation, setShareLocation] = useState(true);
+  const [mode, setMode] = useState("home"); // "home" = mechanic comes to me · "garage" = I bring the car
+  const [here, setHere] = useState({ status: "idle", pos: null }); // idle | locating | ok | denied
   const savedCars = role === "user" ? (account?.vehicles ?? []) : [];
   const [car, setCar] = useState({ vehicle: { ...emptyVehicle, type: getPreferredCarType() }, save: true });
 
@@ -114,7 +124,20 @@ export default function Store() {
   }, [id]);
 
   const chosen = useMemo(() => (shop ? shop.services.filter((s) => selected.includes(s._id)) : []), [shop, selected]);
-  const total = chosen.reduce((sum, s) => sum + s.price, 0);
+  const servicesTotal = chosen.reduce((sum, s) => sum + s.price, 0);
+  const pricing = { ...DEFAULT_TRAVEL_PRICING, ...(shop?.travelPricing || {}) };
+  const tripKm = mode === "home" && here.pos && shop ? distanceKm(shop, here.pos) : null;
+  const tooFar = tripKm != null && pricing.maxDistanceKm && tripKm > pricing.maxDistanceKm;
+  const travelFee = tripKm != null ? travelFeeFor(pricing, tripKm) : 0;
+  const total = servicesTotal + (mode === "home" ? travelFee : 0);
+
+  // locate the customer when they choose home service (estimate only – the server decides the real charge)
+  useEffect(() => {
+    if (mode !== "home" || here.status !== "idle") return;
+    setHere({ status: "locating", pos: null });
+    getPositionOnce().then((pos) => setHere(pos ? { status: "ok", pos } : { status: "denied", pos: null }));
+  }, [mode, here.status]);
+  const homeBlocked = mode === "home" && (here.status !== "ok" || tooFar);
   const toggle = (sid) => setSelected((list) => (list.includes(sid) ? list.filter((x) => x !== sid) : [...list, sid]));
 
   const carReady = isVehicleComplete(car.vehicle);
@@ -129,10 +152,14 @@ export default function Store() {
     }
     setBusy(true);
     try {
-      const location = shareLocation ? await getPositionOnce() : null;
-      if (shareLocation && !location) toast("We couldn't get your location – you can allow it later and sharing will start automatically.");
-      await api.post("/orders", {
-        shareLocation,
+      // fresh position at booking time for home service
+      const location = mode === "home" ? ((await getPositionOnce()) ?? here.pos) : null;
+      if (mode === "home" && !location) {
+        toast.error("Allow location access so the mechanic can find you – or choose to bring the car to the garage.");
+        return;
+      }
+      const { data: placedOrder } = await api.post("/orders", {
+        serviceMode: mode,
         ...(location ? { location } : {}),
         mechanicId: shop._id,
         serviceIds: selected,
@@ -142,7 +169,7 @@ export default function Store() {
       });
       if (car.save) refreshMe().catch(() => {});
       window.dispatchEvent(new Event("mm:orders-changed")); // starts live location sharing if enabled
-      setPlaced(true);
+      setPlaced(placedOrder);
       setSelected([]);
       setNote("");
     } catch (err) {
@@ -240,8 +267,67 @@ export default function Store() {
             </div>
           )}
 
+          {role !== "mechanic" && (
+            <div className="card mb-8 p-5 sm:p-6" id="meet">
+              <h2 className="flex items-center gap-2 text-xl font-bold">
+                <span className="grid size-7 place-items-center rounded-full bg-ink-900 text-sm text-white">2</span> How should we meet?
+              </h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="How should we meet?">
+                {[
+                  { value: "home", title: "Mechanic comes to me", icon: Truck, text: `৳${pricing.base} + ৳${pricing.perKm}/km · free within ${pricing.freeWithinKm} km · up to ${pricing.maxDistanceKm} km` },
+                  { value: "garage", title: "I'll bring the car in", icon: StoreIcon, text: shop.address ? `No travel charge · ${shop.address}` : "No travel charge" },
+                ].map((opt) => {
+                  const on = mode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setMode(opt.value)}
+                      className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200 ${on ? "border-brand-500 bg-brand-50/70 ring-2 ring-brand-500/15" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                    >
+                      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${on ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                        <opt.icon className="size-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-ink-900">{opt.title}</span>
+                        <span className="block text-xs text-slate-500">{opt.text}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {mode === "home" && (
+                <div className="mt-4 text-sm" data-testid="trip-estimate">
+                  {here.status === "locating" && <p className="text-slate-500">Finding your location…</p>}
+                  {here.status === "denied" && (
+                    <p className="rounded-xl bg-amber-50 p-3 text-amber-800">
+                      We need your location to send the mechanic.{" "}
+                      <button className="font-semibold underline" onClick={() => setHere({ status: "idle", pos: null })}>
+                        Try again
+                      </button>{" "}
+                      or choose “I'll bring the car in”.
+                    </p>
+                  )}
+                  {here.status === "ok" && tripKm != null && (
+                    <p className={`rounded-xl p-3 ${tooFar ? "bg-amber-50 text-amber-800" : "bg-slate-50 text-slate-600 ring-1 ring-slate-100"}`}>
+                      {tooFar ? (
+                        <>You're {km(tripKm)} away – {shop.shopname} only travels up to {pricing.maxDistanceKm} km. Bring the car in or pick a closer garage.</>
+                      ) : (
+                        <>
+                          You're <b className="text-ink-900">{km(tripKm)}</b> away · travel charge <b className="text-ink-900">{travelFee ? money(travelFee) : "free"}</b>. Your location is shared with the mechanic after they accept, while this site is open.
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <h2 className="flex items-center gap-2 text-xl font-bold">
-            {role !== "mechanic" && <span className="grid size-7 place-items-center rounded-full bg-ink-900 text-sm text-white">2</span>}
+            {role !== "mechanic" && <span className="grid size-7 place-items-center rounded-full bg-ink-900 text-sm text-white">3</span>}
             Choose your services
           </h2>
           <p className="mt-1 text-sm text-slate-500">Select one or more – prices are fixed by the shop.</p>
@@ -294,7 +380,20 @@ export default function Store() {
               </div>
             )}
 
-            <div className="mt-5 flex items-end justify-between border-t border-dashed border-slate-200 pt-4">
+            {role !== "mechanic" && (
+              <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-500">Services</span>
+                  <span className="font-medium text-ink-900 tabular-nums">{money(servicesTotal)}</span>
+                </div>
+                <div className="flex justify-between gap-4" data-testid="cart-travel">
+                  <span className="text-slate-500">{mode === "home" ? `Travel charge${tripKm != null ? ` · ${km(tripKm)}` : ""}` : "Travel charge"}</span>
+                  <span className="font-medium text-ink-900 tabular-nums">{mode === "home" ? (tripKm == null ? "—" : travelFee ? money(travelFee) : "Free") : "None (at garage)"}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 flex items-end justify-between border-t border-dashed border-slate-200 pt-4">
               <span className="text-sm font-semibold text-ink-900">Total</span>
               <span className="font-display text-3xl font-bold text-brand-700">
                 ৳<AnimatedNumber value={total} />
@@ -308,17 +407,8 @@ export default function Store() {
                 {role === "user" && chosen.length > 0 && (
                   <Field as="textarea" label="Note for the mechanic (optional)" className="mt-5" rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Car won't start, I'm near Mirpur 10" />
                 )}
-                {role === "user" && chosen.length > 0 && (
-                  <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-brand-50/60 p-3 text-sm text-ink-800 ring-1 ring-brand-100">
-                    <input type="checkbox" className="mt-0.5 size-4 shrink-0 rounded accent-brand-600" checked={shareLocation} onChange={(e) => setShareLocation(e.target.checked)} />
-                    <span>
-                      <span className="font-semibold">Share my live location with the mechanic</span>
-                      <span className="block text-xs text-slate-500">Only after they accept, only while this site is open. Stops automatically when the job is done.</span>
-                    </span>
-                  </label>
-                )}
-                <Button size="lg" className="mt-5 w-full" disabled={role === "user" && (chosen.length === 0 || !carSupported)} loading={busy} onClick={book}>
-                  {role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : "Book now"}
+                <Button size="lg" className="mt-5 w-full" disabled={role === "user" && (chosen.length === 0 || !carSupported || homeBlocked)} loading={busy} onClick={book}>
+                  {role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : homeBlocked ? (tooFar ? "Too far for home service" : "Waiting for your location") : "Book now"}
                 </Button>
               </>
             )}
@@ -326,7 +416,7 @@ export default function Store() {
         </aside>
       </div>
 
-      <OrderPlaced open={placed} onClose={() => setPlaced(false)} shopname={shop.shopname} />
+      <OrderPlaced open={!!placed} onClose={() => setPlaced(false)} shopname={shop.shopname} order={placed || null} />
     </div>
   );
 }

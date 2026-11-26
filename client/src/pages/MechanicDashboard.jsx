@@ -10,6 +10,10 @@ import OrderCard from "../components/OrderCard";
 import ServiceEditor from "../components/ServiceEditor";
 import LocationPicker from "../components/LocationPicker";
 import { CarTypeChooser } from "../components/VehiclePicker";
+import { EtaPickerModal } from "../components/TripPanel";
+import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
+
+const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
 import { PasswordForm, ProfileForm } from "../components/AccountSettings";
 import { GearLoader, TighteningWrench } from "../components/mech";
 import { AnimatedNumber, Button, EmptyState, Field, Tabs } from "../components/ui";
@@ -38,6 +42,7 @@ function ShopForm() {
     address: account.address ?? "",
     services: account.services ?? [],
     vehicleTypes: account.vehicleTypes ?? [],
+    travelPricing: { ...DEFAULT_TRAVEL_PRICING, ...(account.travelPricing || {}) },
     location: { latitude: account.latitude, longitude: account.longitude },
   });
   const [busy, setBusy] = useState(false);
@@ -51,6 +56,7 @@ function ShopForm() {
         address: form.address,
         services: form.services.map(({ _id, serviceName, price }) => ({ _id, serviceName, price })),
         vehicleTypes: form.vehicleTypes,
+        travelPricing: numericPricing(form.travelPricing),
         latitude: form.location.latitude,
         longitude: form.location.longitude,
       });
@@ -87,6 +93,24 @@ function ShopForm() {
         </div>
         {form.vehicleTypes.length === 0 && <p className="mt-3 text-sm font-medium text-rose-600">Select at least one car type.</p>}
       </div>
+<div className="card p-6 sm:p-8">
+        <h3 className="text-lg font-semibold">Travel charge (home service)</h3>
+        <p className="mt-1 mb-5 text-sm text-slate-500">Customers who ask you to come to them pay this on top of the services. Free nearby, then base + per km, rounded to ৳10.</p>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {[
+            ["base", "Base charge (৳)"],
+            ["perKm", "Per km (৳)"],
+            ["freeWithinKm", "Free within (km)"],
+            ["maxDistanceKm", "Max distance (km)"],
+          ].map(([k, label]) => (
+            <Field key={k} label={label} type="number" min="0" step="any" value={form.travelPricing[k]} onChange={(e) => setForm({ ...form, travelPricing: { ...form.travelPricing, [k]: e.target.value } })} />
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Example: a customer 5 km away pays <b className="text-ink-900">{money(travelFeeFor(numericPricing(form.travelPricing), 5))}</b> travel · 0.5 km away pays{" "}
+          <b className="text-ink-900">{money(travelFeeFor(numericPricing(form.travelPricing), 0.5))}</b>.
+        </p>
+      </div>
       <div className="card p-6 sm:p-8">
         <h3 className="mb-5 text-lg font-semibold">Shop location</h3>
         <LocationPicker value={form.location} onChange={(location) => setForm({ ...form, location })} />
@@ -104,7 +128,16 @@ export default function MechanicDashboard() {
   const { account } = useAuth();
   const [tab, setTab] = useState("orders");
   const [filter, setFilter] = useState("all");
-  const { orders, setStatus } = useMyOrders();
+  const { orders, setStatus, replace } = useMyOrders();
+  const [accepting, setAccepting] = useState(null); // home-service order waiting for an arrival time
+  const [acceptBusy, setAcceptBusy] = useState(false);
+
+  const confirmAccept = async (etaMinutes) => {
+    setAcceptBusy(true);
+    if (await setStatus(accepting, "accepted", { etaMinutes })) toast.success(`Order accepted – the customer expects you in ~${etaMinutes} min`);
+    setAcceptBusy(false);
+    setAccepting(null);
+  };
 
   const count = (s) => orders?.filter((o) => o.status === s).length ?? 0;
   const earned = orders?.filter((o) => o.status === "completed").reduce((sum, o) => sum + o.totalPrice, 0) ?? 0;
@@ -119,7 +152,11 @@ export default function MechanicDashboard() {
     if (o.status === "pending")
       return (
         <>
-          <Button variant="success" size="sm" onClick={() => act(o, "accepted", "Order accepted – the customer has been notified")}>
+          <Button
+            variant="success"
+            size="sm"
+            onClick={() => (o.serviceMode === "home" ? setAccepting(o) : act(o, "accepted", "Order accepted – the customer has been notified"))}
+          >
             <CheckCircle2 className="size-4" /> Accept
           </Button>
           <Button variant="danger" size="sm" onClick={() => act(o, "cancelled", "Order declined")}>
@@ -130,7 +167,12 @@ export default function MechanicDashboard() {
     if (o.status === "accepted")
       return (
         <>
-          <Button size="sm" onClick={() => act(o, "completed", "Marked as completed")}>
+          <Button
+            size="sm"
+            disabled={!o.verifiedAt}
+            title={o.verifiedAt ? undefined : "Verify the customer's code first"}
+            onClick={() => act(o, "completed", "Marked as completed")}
+          >
             <Flag className="size-4" /> Mark completed
           </Button>
           <Button variant="ghost" size="sm" onClick={() => act(o, "cancelled", "Order cancelled")}>
@@ -189,7 +231,7 @@ export default function MechanicDashboard() {
                 <div className="mt-5 space-y-4">
                   <AnimatePresence mode="popLayout">
                     {shown.map((o) => (
-                      <OrderCard key={o._id} order={o} viewer="mechanic" actions={actionsFor(o)} />
+                      <OrderCard key={o._id} order={o} viewer="mechanic" actions={actionsFor(o)} onChange={replace} />
                     ))}
                   </AnimatePresence>
                   {shown.length === 0 && <p className="py-10 text-center text-sm text-slate-500">No {filter} orders.</p>}
@@ -205,6 +247,14 @@ export default function MechanicDashboard() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      <EtaPickerModal
+        open={!!accepting}
+        onClose={() => setAccepting(null)}
+        onConfirm={confirmAccept}
+        distanceKm={accepting?.customerDistanceKm}
+        busy={acceptBusy}
+      />
     </div>
   );
 }

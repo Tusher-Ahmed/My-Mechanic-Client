@@ -81,6 +81,13 @@ export const vehicle = z.object(
 );
 const vehicles = z.array(vehicle).max(5, "You can save up to 5 cars");
 
+const travelPricing = z.object({
+  base: z.coerce.number().min(0, "Base charge can't be negative").max(100_000),
+  perKm: z.coerce.number().min(0, "Per-km charge can't be negative").max(10_000),
+  freeWithinKm: z.coerce.number().min(0).max(100),
+  maxDistanceKm: z.coerce.number().min(1, "Service radius must be at least 1 km").max(500),
+});
+
 /* ---------- params / query ---------- */
 export const idParams = z.object({ id: objectId() });
 export const roleParams = z.object({ role: z.enum(["user", "mechanic", "admin"], { error: "Not found" }) });
@@ -108,6 +115,7 @@ export const registerMechanic = z.object({
   longitude,
   services: services.optional(),
   vehicleTypes: vehicleTypes.optional(),
+  travelPricing: travelPricing.optional(),
 });
 
 const passwordChange = {
@@ -125,6 +133,8 @@ export const updateMe = {
     longitude: longitude.optional(),
     services: services.optional(),
     vehicleTypes: vehicleTypes.optional(),
+    travelPricing: travelPricing.optional(),
+  travelPricing: travelPricing.optional(),
     ...passwordChange,
   }),
   admin: z.object({ username: name.optional(), ...passwordChange }),
@@ -144,6 +154,7 @@ export const locationUpdate = z.union([
 ]);
 
 export const createOrder = z.object({
+  serviceMode: z.enum(["home", "garage"]).optional(),
   shareLocation: z.boolean().optional(),
   location: geoPoint.optional(),
   mechanicId: objectId("shop"),
@@ -152,7 +163,14 @@ export const createOrder = z.object({
   saveVehicle: z.boolean().optional(),
   note: z.preprocess(emptyToUndefined, z.string().trim().max(500, "Note is too long (max 500 characters)").optional()),
 });
-export const orderStatus = z.object({ status: z.enum(ORDER_STATUSES, { error: "Invalid status" }) });
+export const orderStatus = z.object({
+  status: z.enum(ORDER_STATUSES, { error: "Invalid status" }),
+  etaMinutes: z.number().int().min(5, "Arrival time must be at least 5 minutes").max(480, "Arrival time can be at most 8 hours").optional(),
+});
+export const etaUpdate = z.object({
+  etaMinutes: z.number({ error: "Choose an arrival time" }).int().min(5).max(480),
+});
+export const verifyCode = z.object({ code: z.string({ error: "Enter the 4-digit code" }).trim().regex(/^\d{4}$/, "The code has 4 digits") });
 
 export const contactMessage = z.object({
   email,
@@ -181,6 +199,7 @@ export const adminMechanicUpdate = z.object({
   longitude: longitude.optional(),
   services: services.optional(),
   vehicleTypes: vehicleTypes.optional(),
+  travelPricing: travelPricing.optional(),
   password: z.preprocess(emptyToUndefined, password.optional()),
 });
 export const adminAdminCreate = z.object({ username: name, email, password });

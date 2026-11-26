@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 84 tests
+## 1. API tests (`e2e/tests/api`) – 97 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -289,6 +289,22 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-LOC-07 | Coordinates validated | ✅ |
 | API-LOC-08 | Admins see whether sharing is on, never the coordinates | ✅ |
 
+### Booking → arrival – `trip.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-TRIP-01 | Unique, increasing order numbers (MM-1001…) visible to customer, mechanic, admin | ✅ |
+| API-TRIP-02 | Home service: travel charge from the real distance (৳100 + ৳30/km), added to the total | ✅ |
+| API-TRIP-03 | Free within 1 km; bringing the car in has no travel charge and no location | ✅ |
+| API-TRIP-04 | Per-garage pricing and service radius (too far → refused); pricing is public | ✅ |
+| API-TRIP-05 | Home service needs a location; client-sent fee/total ignored | ✅ |
+| API-TRIP-06 | Customer and mechanic both see the travel charge | ✅ |
+| API-TRIP-07 | Accepting sets an arrival time – suggested from distance or chosen; customer notified | ✅ |
+| API-TRIP-08 | Mechanic updates arrival time ("running late"); customer can't; limits enforced | ✅ |
+| API-TRIP-09 | Verification code visible only to the customer (not mechanic, not admin) | ✅ |
+| API-TRIP-10 | Correct code verifies, stops location sharing, allows completion | ✅ |
+| API-TRIP-11 | Wrong codes: 5 tries, then a 15-minute lock (even the right code) | ✅ |
+| API-TRIP-12 | Only the assigned mechanic can verify; malformed / injected codes rejected | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -302,6 +318,7 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 | Map lists 3 shops, "My car type" filter (SUV → 2 shops), "Near me" sorts by distance, pin → popup | ✅ 06–07 | ✅ |
 | Guest logs in, enters the car (type, make, model, year, plate), selects services, total updates, books | ✅ 08–10 | ✅ |
 | Mechanic receives the order **live** (badge, toast, dashboard) and sees the car + plate | ✅ 11–13 | ✅ |
+| Booking shows travel charge (4.1 km → ৳220) and order number; accept asks for an arrival time (suggested); customer sees countdown + 4-digit code; wrong code refused, right code verifies; job completed | ✅ 09–17e | ✅ |
 | Mechanic accepts → live map of the customer, pin follows when the customer moves ~1 km (15b–15d) | ✅ 15b–15d | ✅ |
 | Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown; car saved in "My cars" | ✅ 14–17b | ✅ |
 | Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |

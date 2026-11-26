@@ -5,6 +5,8 @@ import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "./ui";
 import { CarTypeIcon } from "./VehiclePicker";
+import TripPanel from "./TripPanel";
+import { orderNo } from "../lib/pricing";
 import { date, km, money } from "../lib/format";
 import { fadeUp } from "../lib/motion";
 
@@ -29,7 +31,7 @@ function useCustomerLocationMap(needed) {
   return Comp;
 }
 
-export default function OrderCard({ order, viewer, actions }) {
+export default function OrderCard({ order, viewer, actions, onChange }) {
   const { account } = useAuth();
   const shop = viewer === "mechanic" ? { latitude: account?.latitude, longitude: account?.longitude } : null;
   const showLiveMap = viewer === "mechanic" && order.status === "accepted" && order.shareLocation && !!order.customerLocation;
@@ -54,7 +56,15 @@ export default function OrderCard({ order, viewer, actions }) {
               <p className="font-semibold text-ink-900">{order.user?.username ?? "Customer"}</p>
             )}
             <p className="flex items-center gap-1.5 text-xs text-slate-500">
-              <Calendar className="size-3.5" /> {date(order.createdAt)} · #{order._id.slice(-6).toUpperCase()}
+              <Calendar className="size-3.5" /> {date(order.createdAt)}
+            </p>
+            <p className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md bg-ink-900 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wide text-white" data-testid="order-number">
+                {orderNo(order)}
+              </span>
+              <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${order.serviceMode === "home" ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-600"}`}>
+                {order.serviceMode === "home" ? "Home service" : "At the garage"}
+              </span>
             </p>
           </div>
         </div>
@@ -86,6 +96,14 @@ export default function OrderCard({ order, viewer, actions }) {
               </li>
             ))}
           </ul>
+          {order.serviceMode === "home" && (
+            <div className="mt-1.5 flex justify-between gap-6 text-sm" data-testid="travel-fee">
+              <span className="text-slate-600">
+                Travel charge{order.travelDistanceKm != null && <span className="text-slate-400"> · {km(order.travelDistanceKm)}</span>}
+              </span>
+              <span className="font-medium text-ink-800 tabular-nums">{order.travelFee ? money(order.travelFee) : "Free"}</span>
+            </div>
+          )}
           <div className="mt-3 flex justify-between gap-6 border-t border-dashed border-slate-200 pt-3">
             <span className="text-sm font-semibold text-ink-900">Total</span>
             <span className="font-display text-lg font-bold text-brand-700 tabular-nums">{money(order.totalPrice)}</span>
@@ -120,6 +138,8 @@ export default function OrderCard({ order, viewer, actions }) {
           {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
+
+      <TripPanel order={order} viewer={viewer} onChange={onChange} />
 
       {/* before accepting: distance + approximate area, so the mechanic can decide early */}
       {viewer === "mechanic" && order.status === "pending" && (

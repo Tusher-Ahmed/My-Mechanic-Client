@@ -7,6 +7,7 @@ import { date, money } from "../lib/format";
 import { DataTable, Detail, Drawer, PageHeader, useConfirm } from "../components/admin-ui";
 import { CarTypeIcon } from "../components/VehiclePicker";
 import { Button, StatusBadge } from "../components/ui";
+import { clockTime, orderNo } from "../lib/pricing";
 
 const STATUSES = ["pending", "accepted", "completed", "cancelled"];
 const carText = (v) => (v ? `${v.make} ${v.model}` : "—");
@@ -60,7 +61,7 @@ export default function Orders() {
   };
 
   const del = async (order) => {
-    if (!(await confirm({ title: "Delete this order?", message: `Order #${order._id.slice(-6).toUpperCase()} at ${order.shopname} will be removed permanently.` }))) return;
+    if (!(await confirm({ title: "Delete this order?", message: `Order ${orderNo(order)} at ${order.shopname} will be removed permanently.` }))) return;
     try {
       await api.delete(`/admin/orders/${order._id}`);
       remove(order._id);
@@ -78,7 +79,7 @@ export default function Orders() {
       sortValue: (o) => new Date(o.createdAt).getTime(),
       render: (o) => (
         <div>
-          <p className="font-mono text-xs font-semibold text-ink-900">#{o._id.slice(-6).toUpperCase()}</p>
+          <p className="font-mono text-xs font-semibold text-ink-900">{orderNo(o)}</p>
           <p className="text-xs whitespace-nowrap text-slate-500">{date(o.createdAt)}</p>
         </div>
       ),
@@ -106,7 +107,7 @@ export default function Orders() {
       <DataTable
         columns={columns}
         rows={shown}
-        search={(o) => [o._id, o.shopname, o.user?.username, o.user?.email, carText(o.vehicle), o.vehicle?.plate, o.status].join(" ")}
+        search={(o) => [o._id, orderNo(o), o.shopname, o.user?.username, o.user?.email, carText(o.vehicle), o.vehicle?.plate, o.status].join(" ")}
         onRowClick={setOpen}
         emptyText={filter === "all" ? "No orders yet." : `No ${filter} orders.`}
         initialSort={{ key: "createdAt", dir: "desc" }}
@@ -124,7 +125,7 @@ export default function Orders() {
       <Drawer
         open={!!open}
         onClose={() => setOpen(null)}
-        title={open ? `Order #${open._id.slice(-6).toUpperCase()}` : ""}
+        title={open ? `Order ${orderNo(open)}` : ""}
         subtitle={open ? `${open.shopname} · ${date(open.createdAt)}` : ""}
         footer={
           open && (
@@ -178,6 +179,12 @@ export default function Orders() {
                     <span className="font-medium tabular-nums">{money(s.price)}</span>
                   </div>
                 ))}
+                {open.serviceMode === "home" && (
+                  <div className="flex justify-between gap-4 px-4 py-2.5 text-sm">
+                    <span>Travel charge{open.travelDistanceKm != null && <span className="text-slate-400"> · {open.travelDistanceKm} km</span>}</span>
+                    <span className="font-medium tabular-nums">{open.travelFee ? money(open.travelFee) : "Free"}</span>
+                  </div>
+                )}
                 <div className="flex justify-between bg-slate-50 px-4 py-3 font-semibold">
                   <span>Total</span>
                   <span className="text-brand-700 tabular-nums">{money(open.totalPrice)}</span>
@@ -198,6 +205,10 @@ export default function Orders() {
             </div>
 
             <div className="divide-y divide-slate-100">
+              <Detail label="Service">{open.serviceMode === "home" ? "Mechanic travels to the customer" : "Customer brings the car to the garage"}</Detail>
+              {open.eta?.arriveBy && <Detail label="Arrival promised">{clockTime(open.eta.arriveBy)} ({open.eta.minutes} min)</Detail>}
+              <Detail label="Customer verified">{open.verifiedAt ? `Yes, at ${clockTime(open.verifiedAt)}` : "Not yet"}</Detail>
+              <Detail label="Live location">{open.shareLocation ? "Shared with the mechanic (hidden from admins)" : "Not shared"}</Detail>
               <Detail label="Placed">{date(open.createdAt)}</Detail>
               <Detail label="Last update">{date(open.updatedAt)}</Detail>
               <Detail label="Order ID">

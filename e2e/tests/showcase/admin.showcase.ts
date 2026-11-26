@@ -68,7 +68,13 @@ async function seed(request: APIRequestContext) {
     );
     const h = { Authorization: `Bearer ${mech.token}` };
     if (status === "accepted" || status === "completed") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "accepted" }, headers: h });
-    if (status === "completed") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "completed" }, headers: h });
+    if (status === "completed") {
+      // mechanic verifies the customer's code on arrival, then completes
+      const mine = await (await request.get(`${API_URL}/orders/mine`, { headers: { Authorization: `Bearer ${users[u].token}` } })).json();
+      const code = mine.find((o) => o._id === order._id).verificationCode;
+      await request.post(`${API_URL}/orders/${order._id}/verify`, { data: { code }, headers: h });
+      await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "completed" }, headers: h });
+    }
     if (status === "cancelled") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "cancelled" }, headers: h });
   }
   await post("messages", { email: "rafi@example.com", subject: "Can I book for my motorbike?", message: "Hi! Do you also support motorbikes? My bike broke down near Farmgate.\n\nThanks, Rafi" });

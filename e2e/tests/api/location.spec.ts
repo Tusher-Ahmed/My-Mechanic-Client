@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { API_URL } from "../../playwright.config";
-import { auth, CAR, loginAdmin, registerMechanic, registerUser } from "../../helpers/api";
+import { auth, CAR, loginAdmin, registerMechanic, registerUser, verifyCustomer } from "../../helpers/api";
 
 const DHAKA = { latitude: 23.8103, longitude: 90.4125, accuracy: 15 };
 
@@ -124,6 +124,7 @@ test("API-LOC-05 the customer can stop sharing at any time", async ({ request })
 test("API-LOC-06 completing or cancelling deletes the location and ends sharing", async ({ request }) => {
   const a = await sharedOrder(request);
   await accept(request, a.mech, a.order);
+  await verifyCustomer(request, a.user, a.mech, a.order._id);
   await request.patch(`orders/${a.order._id}/status`, { data: { status: "completed" }, ...auth(a.mech.session.token) });
   const mine = (await (await request.get("orders/mine", auth(a.user.session.token))).json())[0];
   expect(mine.customerLocation).toBeUndefined();

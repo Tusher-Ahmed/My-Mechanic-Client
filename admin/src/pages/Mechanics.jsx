@@ -8,6 +8,7 @@ import { DataTable, Drawer, PageHeader, useConfirm } from "../components/admin-u
 import ServiceEditor from "../components/ServiceEditor";
 import { CarTypeChooser, VehicleTypeBadges } from "../components/VehiclePicker";
 import { VEHICLE_TYPES } from "../data/vehicles";
+import { DEFAULT_TRAVEL_PRICING } from "../lib/pricing";
 import { Avatar, Button, Field } from "../components/ui";
 
 const blank = {
@@ -21,8 +22,10 @@ const blank = {
   latitude: 23.7808875,
   longitude: 90.2792371,
   vehicleTypes: [...VEHICLE_TYPES],
+  travelPricing: { ...DEFAULT_TRAVEL_PRICING },
   services: [],
 };
+const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
 
 export default function Mechanics() {
   const { rows, upsert, remove } = useList("/admin/mechanics");
@@ -48,6 +51,7 @@ export default function Mechanics() {
       latitude: Number(rest.latitude),
       longitude: Number(rest.longitude),
       services: rest.services.map(({ _id: sid, serviceName, price }) => ({ _id: sid, serviceName, price })),
+      travelPricing: numericPricing({ ...DEFAULT_TRAVEL_PRICING, ...(rest.travelPricing || {}) }),
       ...(password ? { password } : {}),
     };
     try {
@@ -193,6 +197,27 @@ export default function Mechanics() {
                 <CarTypeChooser multiple ariaLabel="Car types serviced" placeholder="Select car types" value={editing.vehicleTypes} onChange={(vehicleTypes) => setEditing((f) => ({ ...f, vehicleTypes }))} />
               </div>
               {editing.vehicleTypes.length === 0 && <p className="mt-2 text-sm text-rose-600">Select at least one car type.</p>}
+            </section>
+            <section>
+              <h3 className="mb-3 text-sm font-bold">Travel charge (home service)</h3>
+              <div className="grid gap-3 sm:grid-cols-4">
+                {[
+                  ["base", "Base ৳"],
+                  ["perKm", "Per km ৳"],
+                  ["freeWithinKm", "Free within km"],
+                  ["maxDistanceKm", "Max km"],
+                ].map(([k, label]) => (
+                  <Field
+                    key={k}
+                    label={label}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={editing.travelPricing?.[k] ?? DEFAULT_TRAVEL_PRICING[k]}
+                    onChange={(e) => setEditing((f) => ({ ...f, travelPricing: { ...DEFAULT_TRAVEL_PRICING, ...(f.travelPricing || {}), [k]: e.target.value } }))}
+                  />
+                ))}
+              </div>
             </section>
             <section>
               <h3 className="mb-3 text-sm font-bold">Services & prices</h3>

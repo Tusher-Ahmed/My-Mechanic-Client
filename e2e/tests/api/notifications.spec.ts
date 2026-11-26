@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { API_URL } from "../../playwright.config";
-import { CAR, auth, createOrderFixture, registerMechanic, registerUser } from "../../helpers/api";
+import { CAR, auth, createOrderFixture, registerMechanic, registerUser, verifyCustomer } from "../../helpers/api";
 
 const list = async (request, token) => (await request.get("notifications", auth(token))).json();
 
@@ -16,11 +16,14 @@ test("API-NOTIF-01 new order notifies the mechanic", async ({ request }) => {
 test("API-NOTIF-02 accept and complete notify the customer", async ({ request }) => {
   const { mech, user, order } = await createOrderFixture(request);
   await request.patch(`orders/${order._id}/status`, { data: { status: "accepted" }, ...auth(mech.session.token) });
+  await verifyCustomer(request, user, mech, order._id);
   await request.patch(`orders/${order._id}/status`, { data: { status: "completed" }, ...auth(mech.session.token) });
   const { items, unread } = await list(request, user.session.token);
-  expect(unread).toBe(2);
-  expect(items.map((n) => n.type)).toEqual(["order_completed", "order_accepted"]);
-  expect(items[1].link).toBe("/account");
+  // accepted → code verified ("started work") → completed
+  expect(items.map((n) => n.type)).toEqual(["order_completed", "order_updated", "order_accepted"]);
+  expect(items[2].body).toMatch(/Your code is \d{4}/);
+  expect(unread).toBe(3);
+  expect(items[2].link).toBe("/account");
 });
 
 test("API-NOTIF-03 cancel/decline notify the other party only", async ({ request }) => {

@@ -39,6 +39,8 @@ export async function notify({ recipient, role, type, title, body, link, order }
 }
 
 const list = (services) => services.map((s) => s.serviceName).join(", ");
+const ref = (order) => (order.number ? `MM-${order.number}` : "your order");
+const clock = (d) => new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" });
 
 /** Notifications for order lifecycle events. `order` must have user + mechanic populated. */
 export const orderEvents = {
@@ -48,7 +50,7 @@ export const orderEvents = {
       recipient: order.mechanic._id,
       role: "mechanic",
       type: "order_new",
-      title: `New order from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
+      title: `New order ${ref(order)} from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
       body: `${order.vehicle ? vehicleLabel(order.vehicle) + " – " : ""}${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,
@@ -64,7 +66,16 @@ export const orderEvents = {
 
     switch (order.status) {
       case "accepted":
-        toUser("order_accepted", `${order.shopname} accepted your order`, "You can now call the mechanic – their number is in your orders.");
+        toUser(
+          "order_accepted",
+          `${order.shopname} accepted ${ref(order)}`,
+          [
+            order.eta ? `Arriving in ~${order.eta.minutes} min (by ${clock(order.eta.arriveBy)}).` : "You can now call the mechanic.",
+            order.verificationCode ? `Your code is ${order.verificationCode} – tell it to the mechanic when you meet.` : "",
+          ]
+            .filter(Boolean)
+            .join(" ")
+        );
         break;
       case "completed":
         toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
@@ -80,5 +91,29 @@ export const orderEvents = {
         }
     }
     return Promise.all(tasks);
+  },
+
+  etaUpdated(order) {
+    return notify({
+      recipient: order.user._id,
+      role: "user",
+      type: "order_updated",
+      title: `New arrival time for ${ref(order)}`,
+      body: `${order.shopname} now expects to arrive in ~${order.eta.minutes} min (by ${clock(order.eta.arriveBy)}).`,
+      link: "/account",
+      order: order._id,
+    });
+  },
+
+  verified(order) {
+    return notify({
+      recipient: order.user._id,
+      role: "user",
+      type: "order_updated",
+      title: `Code confirmed – ${order.shopname} has started work`,
+      body: `${ref(order)} · your live location is no longer shared.`,
+      link: "/account",
+      order: order._id,
+    });
   },
 };

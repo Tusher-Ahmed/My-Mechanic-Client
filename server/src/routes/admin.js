@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomInt } from "node:crypto";
 import { User } from "../models/User.js";
 import { Mechanic } from "../models/Mechanic.js";
 import { Admin } from "../models/Admin.js";
@@ -74,11 +75,13 @@ router.get("/orders", validate({ query: S.ordersQuery }), async (req, res) => {
 
 router.patch("/orders/:id/status", validate({ params: S.idParams, body: S.orderStatus }), async (req, res) => {
   const { status } = req.valid.body;
-  const order = await Order.findByIdAndUpdate(
-    req.valid.params.id,
-    status === "completed" || status === "cancelled" ? { status, $unset: { customerLocation: 1 } } : { status },
-    { new: true, runValidators: true }
-  );
+  const update =
+    status === "completed" || status === "cancelled"
+      ? { status, $unset: { customerLocation: 1, verificationCode: 1 } }
+      : status === "accepted"
+        ? { status, verificationCode: String(randomInt(0, 10_000)).padStart(4, "0") } // admin override still gives the customer a code
+        : { status };
+  const order = await Order.findByIdAndUpdate(req.valid.params.id, update, { new: true, runValidators: true });
   if (!order) throw notFound("Order not found");
   const populated = await populateParties(Order.findById(order._id));
   await orderEvents.statusChanged(populated, "admin");

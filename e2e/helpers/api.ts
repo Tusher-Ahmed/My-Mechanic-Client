@@ -64,3 +64,10 @@ export async function createOrderFixture(request: APIRequestContext) {
 }
 
 export const json = (res: APIResponse) => res.json();
+
+/** Mechanic confirms the customer on arrival: read the code from the customer's order, type it in. */
+export async function verifyCustomer(request: APIRequestContext, user: { session: Session }, mech: { session: Session }, orderId: string) {
+  const mine = await (await request.get("orders/mine", auth(user.session.token))).json();
+  const code = mine.find((o: any) => o._id === orderId)?.verificationCode;
+  return request.post(`orders/${orderId}/verify`, { data: { code }, ...auth(mech.session.token) });
+}
