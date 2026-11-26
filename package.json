@@ -4,6 +4,7 @@
   "description": "My Mechanic – find nearby mechanics on a map and book services (client, admin, API).",
   "workspaces": [
     "server",
+    "client",
     "e2e"
   ],
   "scripts": {
@@ -14,7 +15,8 @@
     "build": "npm run build -w client && npm run build -w admin",
     "seed:admin": "npm run seed:admin -w server",
     "test": "npm test -w e2e",
-    "test:api": "npm run test:api -w e2e"
+    "test:api": "npm run test:api -w e2e",
+    "showcase": "npm run showcase -w e2e"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

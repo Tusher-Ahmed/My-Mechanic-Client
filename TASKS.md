@@ -29,18 +29,18 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] N.2 Auto-create on order events (new / accepted / completed / cancelled / admin update)
 - [x] N.3 Real-time delivery with Server-Sent Events + list / mark read / mark all read endpoints
 - [x] N.4 API tests API-NOTIF-01…07
-- [ ] N.5 Client: bell with live badge, dropdown panel, toasts, auto-refresh dashboards
+- [x] N.5 Client: bell with live badge, dropdown panel, toasts, auto-refresh dashboards
 
 ## Phase 3 – Client (`client/`)
-- [ ] 3.1 Move from Create React App to Vite + React 19
-- [ ] 3.2 Replace Bootstrap/reactstrap with Tailwind CSS
-- [ ] 3.3 React Router 7, auth context (token in localStorage), shared axios client using `VITE_API_URL`
-- [ ] 3.4 Map: OpenStreetMap via MapLibre + `react-map-gl` 8 (free, no API key – old Mapbox token was dead)
-- [ ] 3.5 Redesign pages: Home (hero, services, FAQ), Map, Store, User account, Mechanic account, Mechanic register, About, Contact, Login/Register dialogs
-- [ ] 3.6 Animations (Framer Motion), responsive mobile layout, toasts for feedback
-- [ ] 3.7 Compress images (src was 25 MB)
-- [ ] 3.8 Fix duplicate FAQ item and other small bugs
-- [ ] 3.9 Build passes and the app works against the local backend
+- [x] 3.1 Move from Create React App to Vite + React 19
+- [x] 3.2 Replace Bootstrap/reactstrap with Tailwind CSS
+- [x] 3.3 React Router 7, auth context (token in localStorage), shared axios client using `VITE_API_URL`
+- [x] 3.4 Map: OpenStreetMap via MapLibre + `react-map-gl` 8 (free, no API key – old Mapbox token was dead)
+- [x] 3.5 Redesign pages: Home (hero, services, FAQ), Map, Store, User account, Mechanic account, Mechanic register, About, Contact, Login/Register dialogs
+- [x] 3.6 Motion design (motion-design skill rules): driving-car hero, meshing gears, wrench, scroll reveals, reduced-motion support, responsive layout, toasts
+- [x] 3.7 Remove dated stock photos (src was 25 MB) – visuals are now animated SVG built in code
+- [x] 3.8 Fix duplicate FAQ item and other small bugs
+- [x] 3.9 Build passes and the app works against the local backend
 
 ## Phase 4 – Admin (`admin/`)
 - [ ] 4.1 Move to Vite + React 19, remove old Material-UI v4
@@ -52,6 +52,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
 - [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (53 passing)
 - [x] T.3 TESTING.md test-case register
+- [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
 - [ ] T.5 Admin UI tests (UI-AD-01…08) after Phase 4
 - [ ] T.6 Full journey test (E2E-01)

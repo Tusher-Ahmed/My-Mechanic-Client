@@ -6,7 +6,8 @@
     "test": "playwright test",
     "test:api": "playwright test --project=api",
     "test:ui": "playwright test --ui",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "showcase": "playwright test --project=showcase --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1"

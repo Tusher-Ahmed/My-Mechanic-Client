@@ -13,6 +13,7 @@ npx playwright install chromium
 
 npm test            # run every test project
 npm run test:api    # only the backend API tests
+npm run showcase    # opens a real browser and walks through the whole app (screenshots + video)
 npm run report -w e2e   # open the last HTML report
 ```
 
@@ -116,6 +117,21 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
 
 ---
+
+## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
+
+`npm run showcase` seeds 3 garages in Dhaka + a customer, then drives a visible browser through the app and saves
+screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also asserts the key steps:
+
+| Step | Checked | Status |
+|---|---|---|
+| Home hero, how-it-works, features, mechanics band, FAQ render | ✅ screenshots 01–05 | ✅ |
+| Map lists 3 shops, "Near me" sorts by distance, pin → popup | ✅ 06–07 | ✅ |
+| Guest logs in from the dialog, selects services, total updates, books | ✅ 08–10 | ✅ |
+| Mechanic receives the order **live** (badge, toast, dashboard) | ✅ 11–13 | ✅ |
+| Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown | ✅ 14–17 | ✅ |
+| Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |
+| Phone width (390px): home, menu, map – no horizontal scroll | ✅ 23–25 | ✅ |
 
 ## 2. Client UI tests (`e2e/tests/client`) – browser, Chromium
 

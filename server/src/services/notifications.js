@@ -46,7 +46,7 @@ export const orderEvents = {
       role: "mechanic",
       type: "order_new",
       title: `New order from ${order.user.username}`,
-      body: `${list(order.services)} · ৳${order.totalPrice}`,
+      body: `${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,
     });
