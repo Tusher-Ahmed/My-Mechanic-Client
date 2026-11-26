@@ -26,7 +26,7 @@ function validate(step, f) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return "Please enter a valid email.";
     if (!/^\+?[0-9\s-]{7,20}$/.test(f.phone)) return "Please enter a valid phone number.";
     if (!/^[0-9]{10,17}$/.test(f.nid)) return "NID must be 10 to 17 digits.";
-    if (f.password.length < 6) return "Password must be at least 6 characters.";
+    if (f.password.length < 8 || !/[A-Za-z]/.test(f.password) || !/[0-9]/.test(f.password)) return "Password must be at least 8 characters, with a letter and a number.";
   }
   if (step === 1 && f.shopname.trim().length < 3) return "Shop name must be at least 3 characters.";
   if (step === 1 && f.vehicleTypes.length === 0) return "Select at least one car type you service.";
@@ -151,7 +151,7 @@ export default function MechanicRegister() {
                   <Field label="Phone" name="phone" type="tel" value={f.phone} onChange={set} autoComplete="tel" placeholder="01XXXXXXXXX" />
                   <Field label="Email" name="email" type="email" value={f.email} onChange={set} autoComplete="email" />
                   <Field label="NID number" name="nid" inputMode="numeric" value={f.nid} onChange={set} hint="10–17 digits, only visible to admins" />
-                  <Field label="Password" name="password" type="password" value={f.password} onChange={set} autoComplete="new-password" hint="At least 6 characters" className="sm:col-span-2" />
+                  <Field label="Password" name="password" type="password" value={f.password} onChange={set} autoComplete="new-password" hint="At least 8 characters, with a letter and a number" className="sm:col-span-2" />
                 </div>
               )}
               {step === 1 && (

@@ -3,10 +3,11 @@ import { Order } from "../models/Order.js";
 import { Mechanic } from "../models/Mechanic.js";
 import { User, MAX_SAVED_VEHICLES } from "../models/User.js";
 import { sameVehicle } from "../models/vehicle.js";
-import { pick } from "../utils/pick.js";
 import { requireAuth } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
 import { orderEvents } from "../services/notifications.js";
+import * as S from "../validation/schemas.js";
 
 const router = Router();
 
@@ -29,24 +30,17 @@ export const populateParties = (query) =>
     .populate("mechanic", "username email phone shopname address latitude longitude");
 
 // POST /api/orders  { mechanicId, serviceIds: [], vehicle: {type, make, model, year?, plate?}, saveVehicle?, note? }
-router.post("/", requireAuth("user"), async (req, res) => {
-  const { mechanicId, serviceIds, note, saveVehicle } = req.body ?? {};
-  if (!mechanicId || !Array.isArray(serviceIds) || serviceIds.length === 0) {
-    throw badRequest("Choose at least one service");
-  }
-  if (!req.body?.vehicle || typeof req.body.vehicle !== "object") throw badRequest("Tell us which car needs service");
-  const vehicle = pick(req.body.vehicle, ["type", "make", "model", "year", "plate"]);
-  if (vehicle.year === "" || vehicle.year === null) delete vehicle.year;
-  if (!vehicle.plate) delete vehicle.plate;
+router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (req, res) => {
+  const { mechanicId, serviceIds, vehicle, saveVehicle, note } = req.valid.body;
 
   const mechanic = await Mechanic.findById(mechanicId);
   if (!mechanic) throw notFound("Shop not found");
-  if (vehicle.type && !mechanic.vehicleTypes.includes(vehicle.type)) {
+  if (!mechanic.vehicleTypes.includes(vehicle.type)) {
     throw badRequest(`${mechanic.shopname} doesn't service ${vehicle.type} cars. Try another garage.`);
   }
 
   // prices are taken from the database, never trusted from the browser
-  const services = serviceIds.map((id) => {
+  const services = [...new Set(serviceIds)].map((id) => {
     const s = mechanic.services.id(id);
     if (!s) throw badRequest("One of the selected services no longer exists");
     return { serviceId: s._id, serviceName: s.serviceName, price: s.price };
@@ -71,6 +65,7 @@ router.post("/", requireAuth("user"), async (req, res) => {
       await user.save();
     }
   }
+
   await orderEvents.created(await populateParties(Order.findById(order._id)));
   res.status(201).json(order);
 });
@@ -78,7 +73,7 @@ router.post("/", requireAuth("user"), async (req, res) => {
 // GET /api/orders/mine  – orders placed by this user / received by this mechanic
 router.get("/mine", requireAuth("user", "mechanic"), async (req, res) => {
   const { id, role } = req.auth;
-  const orders = await populateParties(Order.find({ [role]: id }).sort({ createdAt: -1 }));
+  const orders = await populateParties(Order.find({ [role]: id }).sort({ createdAt: -1 }).limit(500));
   res.json(orders.map((o) => shapeOrder(o, role)));
 });
 
@@ -88,13 +83,13 @@ const TRANSITIONS = {
 };
 
 // PATCH /api/orders/:id/status  { status }
-router.patch("/:id/status", requireAuth("user", "mechanic"), async (req, res) => {
+router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: S.idParams, body: S.orderStatus }), async (req, res) => {
   const { id, role } = req.auth;
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.valid.params.id);
   if (!order) throw notFound("Order not found");
   if (order[role].toString() !== id) throw forbidden();
 
-  const next = req.body?.status;
+  const next = req.valid.body.status;
   const allowed = TRANSITIONS[role][order.status] || [];
   if (!allowed.includes(next)) throw badRequest(`Can't change a ${order.status} order to ${next}`);
 

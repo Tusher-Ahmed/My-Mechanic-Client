@@ -21,10 +21,14 @@ export const errorHandler = (err, _req, res, _next) => {
   if (err?.type === "entity.parse.failed") {
     return res.status(400).json({ message: "Invalid JSON body" });
   }
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ message: "Request is too large" });
+  }
 
   const status = err.status || 500;
   if (status >= 500) console.error(err);
   res.status(status).json({
     message: status >= 500 && env.isProduction ? "Something went wrong" : err.message,
+    ...(err.errors && status < 500 ? { errors: err.errors } : {}),
   });
 };

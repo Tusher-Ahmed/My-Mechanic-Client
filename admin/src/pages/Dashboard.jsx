@@ -13,7 +13,7 @@ import { fadeUp, stagger } from "../lib/motion";
 
 function Tile({ icon: Icon, label, value, format, hint, to, tone }) {
   const body = (
-    <motion.div variants={fadeUp} whileHover={{ y: -2 }} className="card group h-full p-5 transition-shadow hover:shadow-md">
+    <motion.div variants={fadeUp} whileHover={{ y: -2 }} className="card group h-full min-w-0 p-5 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <span className={`grid size-11 place-items-center rounded-2xl ${tone}`}>
           <Icon className="size-5" />
@@ -30,7 +30,7 @@ function Tile({ icon: Icon, label, value, format, hint, to, tone }) {
 
 function Panel({ title, subtitle, action, children, className = "" }) {
   return (
-    <motion.section variants={fadeUp} className={`card p-5 sm:p-6 ${className}`}>
+    <motion.section variants={fadeUp} className={`card min-w-0 p-5 sm:p-6 ${className}`}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h2 className="font-sans text-base font-bold text-ink-900">{title}</h2>

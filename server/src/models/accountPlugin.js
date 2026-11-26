@@ -23,14 +23,19 @@ export function accountPlugin(schema) {
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
+      minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
+    // bumped on every password change; login tokens carry it and must match exactly,
+    // so old sessions are revoked instantly (no clock / timing window)
+    // always loaded (so every save path increments the real value); removed from JSON output below
+    tokenVersion: { type: Number, default: 0 },
   });
 
   schema.pre("save", async function hashPassword() {
     if (this.isModified("password")) {
-      this.password = await bcrypt.hash(this.password, 10);
+      this.password = await bcrypt.hash(this.password, 12);
+      if (!this.isNew) this.tokenVersion = (this.tokenVersion ?? 0) + 1;
     }
   });
 
@@ -43,6 +48,7 @@ export function accountPlugin(schema) {
     versionKey: false,
     transform: (_doc, ret) => {
       delete ret.password;
+      delete ret.tokenVersion;
       return ret;
     },
   });

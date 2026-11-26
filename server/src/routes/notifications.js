@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { Notification } from "../models/Notification.js";
-import { requireAuth } from "../middleware/auth.js";
-import { verifyToken } from "../utils/token.js";
-import { notFound, unauthorized } from "../utils/httpError.js";
+import { authenticate, requireAuth } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { notFound } from "../utils/httpError.js";
+import { idParams } from "../validation/schemas.js";
 import { sendEvent, subscribe } from "../services/notifications.js";
 
 const router = Router();
@@ -11,13 +12,12 @@ const mine = (req) => ({ recipient: req.auth.id, recipientRole: req.auth.role })
 
 // GET /api/notifications/stream?token=...  – real-time feed (Server-Sent Events).
 // EventSource can't send headers, so the token comes in the query string (redacted from logs).
-router.get("/stream", (req, res, next) => {
+router.get("/stream", async (req, res, next) => {
   let auth;
   try {
-    const payload = verifyToken(String(req.query.token || ""));
-    auth = { id: payload.sub, role: payload.role };
-  } catch {
-    return next(unauthorized());
+    auth = await authenticate(typeof req.query.token === "string" ? req.query.token : "");
+  } catch (err) {
+    return next(err);
   }
 
   res.set({
@@ -52,8 +52,8 @@ router.get("/", async (req, res) => {
 });
 
 // PATCH /api/notifications/:id/read
-router.patch("/:id/read", async (req, res) => {
-  const n = await Notification.findOneAndUpdate({ _id: req.params.id, ...mine(req) }, { read: true }, { new: true });
+router.patch("/:id/read", validate({ params: idParams }), async (req, res) => {
+  const n = await Notification.findOneAndUpdate({ _id: req.valid.params.id, ...mine(req) }, { read: true }, { new: true });
   if (!n) throw notFound("Notification not found");
   res.json(n);
 });

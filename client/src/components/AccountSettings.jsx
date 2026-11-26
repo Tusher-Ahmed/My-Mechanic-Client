@@ -73,7 +73,7 @@ export function PasswordForm() {
       </h3>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Field label="Current password" name="currentPassword" type="password" autoComplete="current-password" value={form.currentPassword} onChange={set} required />
-        <Field label="New password" name="newPassword" type="password" autoComplete="new-password" minLength={6} value={form.newPassword} onChange={set} required />
+        <Field label="New password" name="newPassword" type="password" autoComplete="new-password" minLength={8} value={form.newPassword} onChange={set} required />
         <Field label="Confirm new password" name="confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={set} required error={mismatch ? "Passwords don't match" : undefined} />
       </div>
       <Button type="submit" variant="dark" className="mt-6" loading={busy} disabled={!form.currentPassword || !form.newPassword || mismatch}>

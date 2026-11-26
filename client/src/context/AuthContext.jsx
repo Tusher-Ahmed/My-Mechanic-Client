@@ -57,7 +57,9 @@ export function AuthProvider({ children }) {
 
   const updateProfile = useCallback(async (body) => {
     const { data } = await api.put("/auth/me", body);
-    setSession(data);
+    // a password change revokes old sessions – the server returns a fresh token for this device
+    if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
+    setSession({ role: data.role, account: data.account });
     return data;
   }, []);
 

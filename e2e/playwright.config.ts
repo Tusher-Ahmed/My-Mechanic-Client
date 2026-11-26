@@ -13,6 +13,8 @@ export const API_PORT = 8090;
 export const API_URL = `http://localhost:${API_PORT}/api`;
 export const CLIENT_PORT = 5175;
 export const CLIENT_URL = `http://localhost:${CLIENT_PORT}`;
+export const ADMIN_PORT = 5176;
+export const ADMIN_URL = `http://localhost:${ADMIN_PORT}`;
 export const TEST_ADMIN = { email: "admin@e2e.test", password: "AdminPass123" };
 
 const needsClient = !process.argv.includes("--project=api");
@@ -59,8 +61,9 @@ export default defineConfig({
         PORT: String(API_PORT),
         MONGO_URL: process.env.E2E_MONGO_URL || "mongodb://127.0.0.1:27017/my-mechanic-e2e",
         JWT_SECRET: "e2e-secret",
-        CORS_ORIGINS: `http://localhost:5173,http://localhost:5174,${CLIENT_URL}`,
+        CORS_ORIGINS: `http://localhost:5173,http://localhost:5174,${CLIENT_URL},${ADMIN_URL}`,
         LOGIN_RATE_LIMIT: "10000",
+        REGISTER_RATE_LIMIT: "10000",
         CONTACT_RATE_LIMIT: "10000",
         ADMIN_EMAIL: TEST_ADMIN.email,
         ADMIN_PASSWORD: TEST_ADMIN.password,
@@ -75,6 +78,14 @@ export default defineConfig({
             reuseExistingServer: false,
             timeout: 60_000,
             env: { VITE_API_URL: API_URL },
+          },
+          {
+            command: `npx vite --port ${ADMIN_PORT} --strictPort`,
+            cwd: "../admin",
+            url: ADMIN_URL,
+            reuseExistingServer: false,
+            timeout: 60_000,
+            env: { VITE_API_URL: API_URL, VITE_CLIENT_URL: CLIENT_URL },
           },
         ]
       : []),

@@ -153,8 +153,8 @@ export default function Users() {
                 value={editing.password}
                 onChange={set("password")}
                 required={isNew}
-                minLength={6}
-                hint={isNew ? "At least 6 characters" : "Leave empty to keep the current password"}
+                minLength={8}
+                hint={isNew ? "At least 8 characters, with a letter and a number" : "Leave empty to keep the current password"}
                 className="sm:col-span-2"
               />
             </section>

@@ -16,7 +16,7 @@ createRoot(document.getElementById("root")).render(
           <ConfirmProvider>
             <App />
           </ConfirmProvider>
-          <Toaster position="bottom-right" richColors closeButton toastOptions={{ className: "font-sans" }} />
+          <Toaster position="top-center" offset={{ top: 76 }} mobileOffset={{ top: 72 }} richColors closeButton toastOptions={{ className: "font-sans" }} />
         </AuthProvider>
       </MotionConfig>
     </BrowserRouter>

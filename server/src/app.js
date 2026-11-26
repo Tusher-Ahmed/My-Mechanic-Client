@@ -11,6 +11,7 @@ import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
 import notificationRoutes from "./routes/notifications.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { rejectMongoOperators } from "./middleware/validate.js";
 
 export function createApp() {
   const app = express();
@@ -26,7 +27,8 @@ export function createApp() {
       },
     })
   );
-  app.use(express.json({ limit: "100kb" }));
+  app.use(express.json({ limit: "100kb", strict: true }));
+  app.use(rejectMongoOperators);
   // never write login tokens (used by the notification stream) into the logs
   morgan.token("url", (req) => req.originalUrl.replace(/token=[^&]+/, "token=***"));
   app.use(morgan(env.isProduction ? "combined" : "dev"));

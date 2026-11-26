@@ -70,18 +70,22 @@ test("client showcase", async ({ page, browser, request }) => {
     await shot(page, name);
   }
 
-  // 2. Map – pins, near me, popup
+  // 2. Map – pins, near me, popup (other showcases may have added garages, so count what the API returns)
+  const count = async (qs = "") => (await (await request.get(`${API_URL}/mechanics${qs}`)).json()).length;
+  const allShops = await count();
+  const suvShops = await count(`?vehicleType=${encodeURIComponent("SUV / Jeep")}`);
+  const shops = (n: number) => page.getByText(new RegExp(`^${n} shops?`));
   await page.getByRole("link", { name: "Find mechanics" }).first().click();
-  await expect(page.getByText("3 shops")).toBeVisible();
+  await expect(shops(allShops)).toBeVisible();
   await pause(page, 2500); // tiles + pin drop
   await shot(page, "06-map");
   // car type filter: Gulshan Car Care only services Sedans & Hatchbacks
   await page.getByRole("radio", { name: "SUV / Jeep" }).click();
-  await expect(page.getByText("2 shops")).toBeVisible();
+  await expect(shops(suvShops)).toBeVisible();
   await pause(page, 1500);
   await shot(page, "06b-map-filter-suv");
   await page.getByRole("radio", { name: "All cars" }).click();
-  await expect(page.getByText("3 shops")).toBeVisible();
+  await expect(shops(allShops)).toBeVisible();
 
   await page.getByRole("button", { name: "Use my location" }).click();
   await expect(page.getByText("sorted by distance")).toBeVisible();

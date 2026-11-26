@@ -5,77 +5,77 @@ import { Admin } from "../models/Admin.js";
 import { Order, ORDER_STATUSES } from "../models/Order.js";
 import { Message } from "../models/Message.js";
 import { requireAuth } from "../middleware/auth.js";
+import { Notification } from "../models/Notification.js";
+import { validate } from "../middleware/validate.js";
 import { badRequest, notFound } from "../utils/httpError.js";
-import { pick } from "../utils/pick.js";
+import * as S from "../validation/schemas.js";
 import { populateParties, shapeOrder } from "./orders.js";
 import { orderEvents } from "../services/notifications.js";
 
 const router = Router();
 router.use(requireAuth("admin"));
 
-/** Build list / create / update / delete routes for an account model. */
-function accountRoutes(path, Model, fields, { onDelete } = {}) {
+/** Build list / create / update / delete routes for an account model (bodies validated by Zod). */
+function accountRoutes(path, Model, { create, update }, { onDelete } = {}) {
   router.get(`/${path}`, async (_req, res) => {
-    res.json(await Model.find().sort({ createdAt: -1 }));
+    res.json(await Model.find().sort({ createdAt: -1 }).limit(1000));
   });
 
-  router.get(`/${path}/:id`, async (req, res) => {
-    const doc = await Model.findById(req.params.id);
+  router.get(`/${path}/:id`, validate({ params: S.idParams }), async (req, res) => {
+    const doc = await Model.findById(req.valid.params.id);
     if (!doc) throw notFound();
     res.json(doc);
   });
 
-  router.post(`/${path}`, async (req, res) => {
-    const doc = await Model.create(pick(req.body, [...fields, "password"]));
+  router.post(`/${path}`, validate({ body: create }), async (req, res) => {
+    const doc = await Model.create(req.valid.body);
     res.status(201).json(doc);
   });
 
-  router.put(`/${path}/:id`, async (req, res) => {
-    const doc = await Model.findById(req.params.id);
+  router.put(`/${path}/:id`, validate({ params: S.idParams, body: update }), async (req, res) => {
+    const doc = await Model.findById(req.valid.params.id);
     if (!doc) throw notFound();
-    doc.set(pick(req.body, fields));
-    if (req.body.password) doc.password = String(req.body.password); // hashed by pre-save hook
+    const { password, ...changes } = req.valid.body;
+    doc.set(changes);
+    if (password) doc.password = password; // hashed by pre-save hook; revokes that account's sessions
     await doc.save();
     res.json(doc);
   });
 
-  router.delete(`/${path}/:id`, async (req, res) => {
-    const doc = await Model.findByIdAndDelete(req.params.id);
+  router.delete(`/${path}/:id`, validate({ params: S.idParams }), async (req, res) => {
+    const doc = await Model.findByIdAndDelete(req.valid.params.id);
     if (!doc) throw notFound();
     if (onDelete) await onDelete(doc, req);
     res.json({ _id: doc._id });
   });
 }
 
-accountRoutes("users", User, ["username", "email", "phone", "vehicles"], {
-  onDelete: (doc) => Order.deleteMany({ user: doc._id }),
+accountRoutes("users", User, { create: S.adminUserCreate, update: S.adminUserUpdate }, {
+  onDelete: (doc) => Promise.all([Order.deleteMany({ user: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
 });
-accountRoutes(
-  "mechanics",
-  Mechanic,
-  ["username", "email", "phone", "nid", "shopname", "address", "latitude", "longitude", "services", "vehicleTypes"],
-  { onDelete: (doc) => Order.deleteMany({ mechanic: doc._id }) }
-);
+accountRoutes("mechanics", Mechanic, { create: S.adminMechanicCreate, update: S.adminMechanicUpdate }, {
+  onDelete: (doc) => Promise.all([Order.deleteMany({ mechanic: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
+});
 
 // admins: an admin can't delete their own account (so there is always at least one)
 router.delete("/admins/:id", async (req, res, next) => {
   if (req.params.id === req.auth.id) return next(badRequest("You can't delete your own admin account"));
   next();
 });
-accountRoutes("admins", Admin, ["username", "email"]);
+accountRoutes("admins", Admin, { create: S.adminAdminCreate, update: S.adminAdminUpdate });
 
 // ---------- orders ----------
-router.get("/orders", async (req, res) => {
-  const filter = ORDER_STATUSES.includes(req.query.status) ? { status: req.query.status } : {};
-  const orders = await populateParties(Order.find(filter).sort({ createdAt: -1 }));
+router.get("/orders", validate({ query: S.ordersQuery }), async (req, res) => {
+  const { status } = req.valid.query;
+  const filter = ORDER_STATUSES.includes(status) ? { status } : {};
+  const orders = await populateParties(Order.find(filter).sort({ createdAt: -1 }).limit(2000));
   res.json(orders.map((o) => shapeOrder(o, "admin")));
 });
 
-router.patch("/orders/:id/status", async (req, res) => {
-  if (!ORDER_STATUSES.includes(req.body?.status)) throw badRequest("Invalid status");
+router.patch("/orders/:id/status", validate({ params: S.idParams, body: S.orderStatus }), async (req, res) => {
   const order = await Order.findByIdAndUpdate(
-    req.params.id,
-    { status: req.body.status },
+    req.valid.params.id,
+    { status: req.valid.body.status },
     { new: true, runValidators: true }
   );
   if (!order) throw notFound("Order not found");
@@ -84,19 +84,19 @@ router.patch("/orders/:id/status", async (req, res) => {
   res.json(shapeOrder(populated, "admin"));
 });
 
-router.delete("/orders/:id", async (req, res) => {
-  const order = await Order.findByIdAndDelete(req.params.id);
+router.delete("/orders/:id", validate({ params: S.idParams }), async (req, res) => {
+  const order = await Order.findByIdAndDelete(req.valid.params.id);
   if (!order) throw notFound("Order not found");
   res.json({ _id: order._id });
 });
 
 // ---------- messages ----------
 router.get("/messages", async (_req, res) => {
-  res.json(await Message.find().sort({ createdAt: -1 }));
+  res.json(await Message.find().sort({ createdAt: -1 }).limit(1000));
 });
 
-router.delete("/messages/:id", async (req, res) => {
-  const msg = await Message.findByIdAndDelete(req.params.id);
+router.delete("/messages/:id", validate({ params: S.idParams }), async (req, res) => {
+  const msg = await Message.findByIdAndDelete(req.valid.params.id);
   if (!msg) throw notFound("Message not found");
   res.json({ _id: msg._id });
 });

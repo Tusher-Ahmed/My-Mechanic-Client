@@ -92,7 +92,7 @@ export default function AuthDialog() {
             onChange={set}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             required
-            hint={mode === "register" ? "At least 6 characters" : undefined}
+            hint={mode === "register" ? "At least 8 characters, with a letter and a number" : undefined}
             placeholder="••••••••"
           />
 

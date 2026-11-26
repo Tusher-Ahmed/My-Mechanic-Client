@@ -10,6 +10,10 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   console.error("Set ADMIN_EMAIL and ADMIN_PASSWORD in server/.env first.");
   process.exit(1);
 }
+if (ADMIN_PASSWORD.length < 8 || !/[A-Za-z]/.test(ADMIN_PASSWORD) || !/[0-9]/.test(ADMIN_PASSWORD)) {
+  console.error("ADMIN_PASSWORD must be at least 8 characters with a letter and a number.");
+  process.exit(1);
+}
 
 await connectDB(env.mongoUrl);
 

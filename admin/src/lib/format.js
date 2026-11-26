@@ -1,4 +1,4 @@
-export const money = (n) => `৳${Number(n || 0).toLocaleString("en-US")}`;
+export const money = (n) => `৳${Math.round(Number(n) || 0).toLocaleString("en-US")}`;
 
 export const date = (d) =>
   new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });

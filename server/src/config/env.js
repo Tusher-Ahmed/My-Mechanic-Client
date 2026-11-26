@@ -6,6 +6,12 @@ if (missing.length) {
   process.exit(1);
 }
 
+// in production the token-signing secret must be long and random
+if (process.env.NODE_ENV === "production" && process.env.JWT_SECRET.length < 32) {
+  console.error("JWT_SECRET is too short for production – use at least 32 random characters.");
+  process.exit(1);
+}
+
 export const env = {
   port: Number(process.env.PORT) || 8080,
   mongoUrl: process.env.MONGO_URL,
@@ -19,4 +25,6 @@ export const env = {
   // max login attempts per IP per 15 min / contact messages per IP per hour
   loginRateLimit: Number(process.env.LOGIN_RATE_LIMIT) || 20,
   contactRateLimit: Number(process.env.CONTACT_RATE_LIMIT) || 10,
+  // new accounts per IP per hour
+  registerRateLimit: Number(process.env.REGISTER_RATE_LIMIT) || 10,
 };

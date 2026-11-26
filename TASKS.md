@@ -43,18 +43,18 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] 3.9 Build passes and the app works against the local backend
 
 ## Phase 4 – Admin (`admin/`)
-- [ ] 4.1 Move to Vite + React 19, remove old Material-UI v4
-- [ ] 4.2 Tailwind CSS, auth with admin token, shared axios client
-- [ ] 4.3 Redesign: dashboard (stats + charts), users, mechanics, orders, messages, edit forms
-- [ ] 4.4 Build passes and the app works against the local backend
+- [x] 4.1 Move to Vite + React 19, remove old Material-UI v4
+- [x] 4.2 Tailwind CSS, auth with admin token, shared axios client
+- [x] 4.3 Redesign: dashboard (stats + charts), users, mechanics, orders, messages, admins, edit drawers
+- [x] 4.4 Build passes; admin showcase walk-through passes (desktop + phone)
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (61 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (76 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
-- [ ] T.5 Admin UI tests (UI-AD-01…08) after Phase 4
+- [x] T.5 Admin walk-through (`admin.showcase.ts`) covers UI-AD-01…08
 - [ ] T.6 Full journey test (E2E-01)
 
 ## Phase V – Car model & type
@@ -64,6 +64,20 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] V.4 Car shown on order cards and in the mechanic's notification
 - [x] V.5 API tests API-CAR-01…08
 - [x] V.6 Client UI: car picker in booking, map filter, garage car types, "My cars" in settings, showcase
+
+## Phase S – Security hardening
+- [x] S.1 Zod validation on every endpoint (types, formats, lengths, enums; unknown fields stripped)
+- [x] S.2 NoSQL-injection blocking ($-keys / dotted keys rejected) + mongoose sanitizeFilter
+- [x] S.3 Strong passwords (8–72 chars, letter + number), bcrypt cost 12
+- [x] S.4 Token version: password change / admin reset / account deletion revoke sessions instantly
+- [x] S.5 JWT algorithm pinned (HS256); weak JWT_SECRET refused in production
+- [x] S.6 Timing-safe login (no email enumeration); register rate limit; search/note length caps
+- [x] S.7 maplibre-gl upgraded to 6.19 (critical XSS advisory) – `npm audit`: 0 vulnerabilities
+- [x] S.8 15 security tests (API-SEC-01…15) – all attacks fail safely
+
+## Phase D – Requested improvements
+- [ ] D.1 Car type picker: searchable dropdown (single + multi select) instead of chip rows
+- [ ] D.2 Live customer location shared with the mechanic after acceptance (consent, auto-stop, live map)
 
 ## Phase 5 – Deployment prep
 - [ ] 5.1 `render.yaml` for the backend; `vercel.json` (SPA routing) for client and admin
