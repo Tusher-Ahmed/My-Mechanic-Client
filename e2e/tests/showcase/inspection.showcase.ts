@@ -21,7 +21,7 @@ test("inspection → findings → book the fix", async ({ page, browser, request
   };
 
   // seed: a garage (inspection fee ৳450) with a plan, a customer with a saved car
-  const shopname = `Inspect Auto ${t}`;
+  const shopname = "Banani Auto Lab";
   const mech = await call("POST", "auth/mechanic/register", {
     username: "Sohel Rana", email: `ins-m-${t}@showcase.test`, phone: "01812345678", nid: "1234512345", password: "secret123",
     shopname, tradeLicense: `TRAD/INS/${t}`, inspectionFee: 450, address: "Tejgaon", latitude: 23.78, longitude: 90.4,

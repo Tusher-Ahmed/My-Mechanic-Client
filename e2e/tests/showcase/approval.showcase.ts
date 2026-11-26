@@ -14,7 +14,7 @@ const pause = (page: Page, ms = 700) => page.waitForTimeout(ms);
 test("garage approval", async ({ page, browser, request }) => {
   test.setTimeout(4 * 60_000);
   const t = Date.now().toString(36);
-  const shopname = `Tejgaon Auto Lab ${t}`;
+  const shopname = "Tejgaon Auto Lab";
   const onMap = async () => (await (await request.get(`${API_URL}/mechanics?q=${encodeURIComponent(shopname)}`)).json()).length;
 
   // 1. the mechanic registers through the wizard – trade licence required
