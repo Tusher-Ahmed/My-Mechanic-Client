@@ -8,12 +8,24 @@ import { validate } from "../middleware/validate.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
 import { orderEvents, publish } from "../services/notifications.js";
 import * as S from "../validation/schemas.js";
+import { approximate, distanceKm } from "../utils/geo.js";
 
 const router = Router();
 
 /** Contact details (email/phone) are only shared once the mechanic has accepted the order. */
 export function shapeOrder(order, viewerRole) {
   const o = order.toJSON();
+  const loc = o.shareLocation ? o.customerLocation : null;
+  const shop = o.mechanic && typeof o.mechanic === "object" ? o.mechanic : null;
+
+  // the mechanic always gets the distance (from the exact position) to decide before accepting
+  if (viewerRole === "mechanic" && loc && shop) {
+    const d = distanceKm(shop, loc);
+    if (d != null) o.customerDistanceKm = Math.round(d * 100) / 100; // 10 m steps
+  }
+  // while pending, the mechanic only sees an approximate area (~1 km grid), never the exact spot
+  if (viewerRole === "mechanic" && loc && o.status === "pending") o.approxLocation = approximate(loc);
+
   // exact location: the customer always sees their own; the mechanic only while the job is accepted; admins never
   const showLocation = viewerRole === "user" || (viewerRole === "mechanic" && o.status === "accepted" && o.shareLocation);
   if (!showLocation) delete o.customerLocation;

@@ -2,6 +2,7 @@
 // Subscribers are kept in memory (one server instance is enough for this project).
 import { Notification } from "../models/Notification.js";
 import { vehicleLabel } from "../models/vehicle.js";
+import { distanceKm, formatKm } from "../utils/geo.js";
 
 const subscribers = new Map(); // "role:id" -> Set<res>
 const key = (role, id) => `${role}:${id}`;
@@ -42,11 +43,12 @@ const list = (services) => services.map((s) => s.serviceName).join(", ");
 /** Notifications for order lifecycle events. `order` must have user + mechanic populated. */
 export const orderEvents = {
   created(order) {
+    const d = order.shareLocation && order.customerLocation ? distanceKm(order.mechanic, order.customerLocation) : null;
     return notify({
       recipient: order.mechanic._id,
       role: "mechanic",
       type: "order_new",
-      title: `New order from ${order.user.username}`,
+      title: `New order from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
       body: `${order.vehicle ? vehicleLabel(order.vehicle) + " – " : ""}${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,

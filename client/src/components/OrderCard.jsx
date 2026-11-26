@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "./ui";
 import { CarTypeIcon } from "./VehiclePicker";
-import { date, money } from "../lib/format";
+import { date, km, money } from "../lib/format";
 import { fadeUp } from "../lib/motion";
 
 /** One order. `viewer` = "user" (sees the shop) or "mechanic" (sees the customer). */
@@ -33,7 +33,8 @@ export default function OrderCard({ order, viewer, actions }) {
   const { account } = useAuth();
   const shop = viewer === "mechanic" ? { latitude: account?.latitude, longitude: account?.longitude } : null;
   const showLiveMap = viewer === "mechanic" && order.status === "accepted" && order.shareLocation && !!order.customerLocation;
-  const CustomerLocationMap = useCustomerLocationMap(showLiveMap);
+  const showArea = viewer === "mechanic" && order.status === "pending" && !!order.approxLocation;
+  const CustomerLocationMap = useCustomerLocationMap(showLiveMap || showArea);
   const other = viewer === "user" ? order.mechanic : order.user;
   const hasContact = !!other?.phone;
 
@@ -119,6 +120,29 @@ export default function OrderCard({ order, viewer, actions }) {
           {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
+
+      {/* before accepting: distance + approximate area, so the mechanic can decide early */}
+      {viewer === "mechanic" && order.status === "pending" && (
+        <div className="border-t border-slate-100 p-5 pt-4">
+          <p className="mb-2.5 flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-900">
+            <MapPin className="size-4 text-brand-600" /> Where is the customer?
+            {order.customerDistanceKm != null && (
+              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700" data-testid="customer-distance">
+                ≈ {km(order.customerDistanceKm)} away
+              </span>
+            )}
+          </p>
+          {showArea ? (
+            CustomerLocationMap ? (
+              <CustomerLocationMap location={order.approxLocation} shop={shop} approx distance={order.customerDistanceKm} />
+            ) : (
+              <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
+            )
+          ) : (
+            <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 ring-1 ring-slate-100">The customer didn't share their location – call them after accepting to agree where to meet.</p>
+          )}
+        </div>
+      )}
 
       {/* live customer location */}
       {viewer === "mechanic" && order.status === "accepted" && order.shareLocation && (

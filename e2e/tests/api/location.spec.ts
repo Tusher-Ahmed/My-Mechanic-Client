@@ -17,22 +17,53 @@ const mechView = async (request, mech) => (await (await request.get("orders/mine
 const accept = (request, mech, order) => request.patch(`orders/${order._id}/status`, { data: { status: "accepted" }, ...auth(mech.session.token) });
 const move = (request, user, order, data) => request.patch(`orders/${order._id}/location`, { data, ...auth(user.session.token) });
 
-test("API-LOC-01 location is hidden from the mechanic until they accept", async ({ request }) => {
+test("API-LOC-01 before accepting: distance + approximate area only; exact location after accepting", async ({ request }) => {
   const { user, mech, order } = await sharedOrder(request);
   expect(order.customerLocation).toMatchObject({ latitude: DHAKA.latitude, longitude: DHAKA.longitude }); // customer sees own
-  expect((await mechView(request, mech)).customerLocation).toBeUndefined();
+  const pending = await mechView(request, mech);
+  expect(pending.customerLocation).toBeUndefined();
+  // shop is at 23.78, 90.28 (helpers) → customer at 23.8103, 90.4125 is ~13.8 km away
+  expect(pending.customerDistanceKm).toBeGreaterThan(13);
+  expect(pending.customerDistanceKm).toBeLessThan(15);
+  expect(pending.approxLocation).toEqual({ latitude: 23.81, longitude: 90.41, radiusM: 800 }); // snapped, not exact
+  expect(JSON.stringify(pending)).not.toContain("23.8103");
+  const { items } = await (await request.get("notifications", auth(mech.session.token))).json();
+  expect(items[0].title).toMatch(/· 1[34]\.\d km away$/); // distance in the new-order alert
 
   await accept(request, mech, order);
   const seen = await mechView(request, mech);
   expect(seen.shareLocation).toBe(true);
   expect(seen.customerLocation).toMatchObject({ latitude: DHAKA.latitude, longitude: DHAKA.longitude, accuracy: 15 });
   expect(seen.customerLocation.updatedAt).toBeTruthy();
+  expect(seen.approxLocation).toBeUndefined();
+  expect(seen.customerDistanceKm).toBeGreaterThan(13);
   void user;
+});
+
+test("API-LOC-01b short distances are given in metres, not '0 km'", async ({ request }) => {
+  const user = await registerUser(request);
+  const mech = await registerMechanic(request); // shop at 23.78, 90.28
+  const near = async (latitude: number) => {
+    await request.post("orders", {
+      data: { mechanicId: mech.session.account._id, serviceIds: [mech.session.account.services[0]._id], vehicle: CAR, shareLocation: true, location: { latitude, longitude: 90.28 } },
+      ...auth(user.session.token),
+    });
+    const { items } = await (await request.get("notifications", auth(mech.session.token))).json();
+    return items[0].title;
+  };
+  expect(await near(23.7832)).toMatch(/· 360 m away$/); // ~356 m north → 10 m steps
+  expect(await near(23.7803)).toMatch(/· under 100 m away$/); // ~33 m
+  const [o] = await (await request.get("orders/mine", auth(mech.session.token))).json();
+  expect(o.customerDistanceKm).toBeLessThan(0.1);
+  expect(o.customerDistanceKm).toBeGreaterThan(0);
 });
 
 test("API-LOC-02 without consent no location is stored or shown", async ({ request }) => {
   const { mech, order } = await sharedOrder(request, { share: false });
   expect(order.shareLocation).toBe(false);
+  const pending = await mechView(request, mech);
+  expect(pending.approxLocation).toBeUndefined();
+  expect(pending.customerDistanceKm).toBeUndefined();
   await accept(request, mech, order);
   expect((await mechView(request, mech)).customerLocation).toBeUndefined();
 });
@@ -118,4 +149,5 @@ test("API-LOC-08 admins see whether sharing is on, but never the coordinates", a
   const o = all.find((x) => x._id === order._id);
   expect(o.shareLocation).toBe(true);
   expect(o.customerLocation).toBeUndefined();
+  expect(o.approxLocation).toBeUndefined();
 });

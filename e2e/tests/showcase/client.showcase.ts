@@ -156,6 +156,14 @@ test("client showcase", async ({ page, browser, request }) => {
   await expect(mech.getByTestId("order-vehicle")).toContainText("DHAKA METRO-GA 12-3456");
   await mech.screenshot({ path: path.join(OUT, "13-mechanic-dashboard.png") });
 
+  // before accepting: distance + approximate area only (decide early, customer privacy kept)
+  await expect(mech.getByTestId("customer-distance")).toHaveText(/^≈ (\d+\.\d km|\d+0 m|under 100 m) away$/);
+  await expect(mech.getByTestId("customer-area")).toBeVisible();
+  await expect(mech.getByTestId("customer-location")).toHaveCount(0); // no exact pin yet
+  await mech.getByTestId("customer-area").scrollIntoViewIfNeeded();
+  await pause(mech, 2500);
+  await mech.screenshot({ path: path.join(OUT, "13b-mechanic-pending-distance.png") });
+
   // customer goes to their orders (pending), then mechanic accepts → customer notified live
   await page.getByRole("button", { name: "View my orders" }).click();
   await expect(page.getByText("pending").first()).toBeVisible();

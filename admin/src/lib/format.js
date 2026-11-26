@@ -22,7 +22,8 @@ export function distanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export const km = (d) => (d == null ? "" : d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`);
+/** Human distance: "under 100 m" · "340 m" (10 m steps) · "4.1 km". Keep in sync with server/src/utils/geo.js */
+export const km = (d) => (d == null ? "" : d < 0.1 ? "under 100 m" : d < 1 ? `${Math.round(d * 100) * 10} m` : `${d.toFixed(1)} km`);
 
 export const minPrice = (services = []) => (services.length ? Math.min(...services.map((s) => s.price)) : null);
 
