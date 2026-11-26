@@ -9,7 +9,7 @@ import { DEFAULT_CENTER, MAP_STYLE, useGeolocation } from "../lib/map";
 import { distanceKm, km, minPrice, money } from "../lib/format";
 import { GearLoader } from "../components/mech";
 import { Button } from "../components/ui";
-import { CarTypeChooser } from "../components/VehiclePicker";
+import { CarTypeChooser, VehicleTypeBadges } from "../components/VehiclePicker";
 import { getPreferredCarType, setPreferredCarType } from "../data/vehicles";
 import { ease, fadeUp, stagger } from "../lib/motion";
 
@@ -57,14 +57,17 @@ function ShopRow({ shop, active, onSelect }) {
           </div>
           {shop.distance != null && <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{km(shop.distance)}</span>}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5">
           {shop.services.slice(0, 3).map((s) => (
-            <span key={s._id} className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600 ring-1 ring-slate-200">
+            <span key={s._id} className="max-w-[10rem] truncate rounded-full bg-white px-2 py-0.5 text-xs text-slate-600 ring-1 ring-slate-200" title={s.serviceName}>
               {s.serviceName}
             </span>
           ))}
           {shop.services.length > 3 && <span className="text-xs text-slate-400">+{shop.services.length - 3} more</span>}
-          {from != null && <span className="ml-auto text-xs font-semibold text-brand-700">from {money(from)}</span>}
+        </div>
+        <div className="mt-2.5 flex min-w-0 items-center justify-between gap-3">
+          <VehicleTypeBadges types={shop.vehicleTypes} max={2} size="xs" expandable={false} />
+          {from != null && <span className="shrink-0 text-xs font-semibold text-brand-700">from {money(from)}</span>}
         </div>
       </button>
     </motion.li>

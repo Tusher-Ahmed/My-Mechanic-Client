@@ -9,7 +9,7 @@ import { money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
 import { Car, Gear, GearLoader } from "../components/mech";
 import { AnimatedNumber, Button, EmptyState, Field, Modal } from "../components/ui";
-import VehiclePicker, { CarTypeIcon, cleanVehicle, isVehicleComplete } from "../components/VehiclePicker";
+import VehiclePicker, { CarTypeIcon, VehicleTypeBadges, cleanVehicle, isVehicleComplete } from "../components/VehiclePicker";
 import { emptyVehicle, getPreferredCarType, vehicleLabel } from "../data/vehicles";
 import { dur, ease, fadeUp, stagger } from "../lib/motion";
 
@@ -198,13 +198,9 @@ export default function Store() {
             </span>
           </div>
           {shop.vehicleTypes?.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-4 flex max-w-2xl flex-wrap items-center gap-2">
               <span className="text-xs font-semibold tracking-wide text-slate-400 uppercase">We service</span>
-              {shop.vehicleTypes.map((t) => (
-                <span key={t} className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white">
-                  <CarTypeIcon type={t} className="h-3.5 w-8 text-brand-300" /> {t}
-                </span>
-              ))}
+              <VehicleTypeBadges types={shop.vehicleTypes} tone="dark" max={3} />
             </div>
           )}
           <Button href={googleMapsUrl(shop)} target="_blank" rel="noopener noreferrer" variant="accent" size="sm" className="mt-6">

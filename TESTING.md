@@ -145,6 +145,11 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 | Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |
 | Phone width (390px): home, menu, map – no horizontal scroll | ✅ 23–25 | ✅ |
 
+**Layout stress** (`layout-stress.showcase.ts`, desktop + phone): the API is faked with extreme garages –
+12 car types (incl. unknown future types), very long shop / owner / address / service names, 15 services.
+Checks that no element overflows the page, that car types collapse to 3 chips + "+N more" (expandable),
+and that a garage servicing every type shows a single "All car types" badge. Screenshots: `stress-*.png`. ✅
+
 ## 2. Client UI tests (`e2e/tests/client`) – browser, Chromium
 
 | ID | Case | Status |

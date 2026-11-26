@@ -28,6 +28,78 @@ export function CarTypeIcon({ type, className = "h-7 w-16" }) {
   );
 }
 
+/**
+ * Compact, overflow-safe display of the car types a garage services.
+ *  - every known type → one "All car types" badge
+ *  - otherwise the first `max` chips + "+N more" that expands inline
+ * Chips wrap and truncate, so any number / length of types keeps the layout intact.
+ */
+export function VehicleTypeBadges({ types = [], max = 3, tone = "light", size = "sm", expandable = true }) {
+  const [expanded, setExpanded] = useState(false);
+  const unique = [...new Set(types)];
+  if (unique.length === 0) return null;
+
+  const coversAll = VEHICLE_TYPES.every((t) => unique.includes(t));
+  const chip =
+    tone === "dark"
+      ? "bg-white/10 text-white ring-1 ring-white/10"
+      : "bg-white text-slate-600 ring-1 ring-slate-200";
+  const icon = tone === "dark" ? "text-brand-300" : "text-brand-600";
+  const text = size === "xs" ? "text-[11px] px-2 py-0.5 gap-1" : "text-xs px-2.5 py-1 gap-1.5";
+  const iconSize = size === "xs" ? "h-3 w-7" : "h-3.5 w-8";
+
+  if (coversAll) {
+    return (
+      <span className={`inline-flex max-w-full items-center rounded-full font-semibold ${chip} ${text}`} data-testid="vehicle-types" title={unique.join(", ")}>
+        <span className="flex -space-x-3">
+          {VEHICLE_TYPES.slice(0, 3).map((t) => (
+            <CarTypeIcon key={t} type={t} className={`${iconSize} ${icon}`} />
+          ))}
+        </span>
+        All car types
+      </span>
+    );
+  }
+
+  const shown = expanded ? unique : unique.slice(0, max);
+  const hidden = unique.length - shown.length;
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5" data-testid="vehicle-types">
+      <AnimatePresence initial={false}>
+        {shown.map((t) => (
+          <motion.span
+            key={t}
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: dur.quick }}
+            className={`inline-flex max-w-[12rem] min-w-0 items-center rounded-full font-semibold ${chip} ${text}`}
+            title={t}
+          >
+            <CarTypeIcon type={t} className={`${iconSize} shrink-0 ${icon}`} />
+            <span className="truncate">{t}</span>
+          </motion.span>
+        ))}
+      </AnimatePresence>
+      {!expandable && hidden > 0 && <span className={`font-semibold text-slate-400 ${text}`}>+{hidden}</span>}
+      {expandable && (hidden > 0 || expanded) && unique.length > max && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded((x) => !x);
+          }}
+          className={`rounded-full font-semibold underline-offset-2 hover:underline ${tone === "dark" ? "text-brand-200" : "text-brand-700"} ${text}`}
+          aria-expanded={expanded}
+        >
+          {expanded ? "Show less" : `+${hidden} more`}
+        </button>
+      )}
+    </span>
+  );
+}
+
 /** Pick one or several car types (used for the map filter and for mechanics' "we service" list). */
 export function CarTypeChooser({ value, onChange, multiple = false, allowAll = false, size = "md" }) {
   const selected = multiple ? value : [value];
