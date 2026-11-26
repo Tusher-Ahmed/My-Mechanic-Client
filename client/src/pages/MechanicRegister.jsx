@@ -160,7 +160,7 @@ export default function MechanicRegister() {
                   <Field label="Address / area (optional)" name="address" value={f.address} onChange={set} placeholder="e.g. Road 4, Mirpur 10, Dhaka" />
                   <div>
                     <span className="label">Car types you service</span>
-                    <CarTypeChooser multiple value={f.vehicleTypes} onChange={(vehicleTypes) => setF((x) => ({ ...x, vehicleTypes }))} size="sm" />
+                    <CarTypeChooser multiple ariaLabel="Car types you service" placeholder="Select car types" value={f.vehicleTypes} onChange={(vehicleTypes) => setF((x) => ({ ...x, vehicleTypes }))} />
                     <p className="mt-1.5 text-xs text-slate-500">Customers filter the map by car type. You can change this later.</p>
                   </div>
                 </div>

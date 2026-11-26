@@ -189,7 +189,9 @@ export default function Mechanics() {
             </section>
             <section>
               <h3 className="mb-3 text-sm font-bold">Car types serviced</h3>
-              <CarTypeChooser multiple size="sm" value={editing.vehicleTypes} onChange={(vehicleTypes) => setEditing((f) => ({ ...f, vehicleTypes }))} />
+              <div className="max-w-sm">
+                <CarTypeChooser multiple ariaLabel="Car types serviced" placeholder="Select car types" value={editing.vehicleTypes} onChange={(vehicleTypes) => setEditing((f) => ({ ...f, vehicleTypes }))} />
+              </div>
               {editing.vehicleTypes.length === 0 && <p className="mt-2 text-sm text-rose-600">Select at least one car type.</p>}
             </section>
             <section>

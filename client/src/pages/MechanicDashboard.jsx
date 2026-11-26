@@ -82,7 +82,9 @@ function ShopForm() {
       <div className="card p-6 sm:p-8">
         <h3 className="text-lg font-semibold">Car types we service</h3>
         <p className="mt-1 mb-5 text-sm text-slate-500">Customers filter the map by car type – only selected types can book you.</p>
-        <CarTypeChooser multiple value={form.vehicleTypes} onChange={(vehicleTypes) => setForm({ ...form, vehicleTypes })} />
+        <div className="max-w-sm">
+          <CarTypeChooser multiple ariaLabel="Car types we service" placeholder="Select car types" value={form.vehicleTypes} onChange={(vehicleTypes) => setForm({ ...form, vehicleTypes })} />
+        </div>
         {form.vehicleTypes.length === 0 && <p className="mt-3 text-sm font-medium text-rose-600">Select at least one car type.</p>}
       </div>
       <div className="card p-6 sm:p-8">

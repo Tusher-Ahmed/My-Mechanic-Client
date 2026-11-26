@@ -1,6 +1,7 @@
-import { useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import { MAKES, VEHICLE_TYPES, emptyVehicle, vehicleKey, vehicleLabel } from "../data/vehicles";
 import { dur, ease } from "../lib/motion";
 
@@ -100,44 +101,220 @@ export function VehicleTypeBadges({ types = [], max = 3, tone = "light", size = 
   );
 }
 
-/** Pick one or several car types (used for the map filter and for mechanics' "we service" list). */
-export function CarTypeChooser({ value, onChange, multiple = false, allowAll = false, size = "md" }) {
-  const selected = multiple ? value : [value];
-  const toggle = (t) => {
-    if (!multiple) return onChange(t);
-    onChange(selected.includes(t) ? selected.filter((x) => x !== t) : [...selected, t]);
+/**
+ * Searchable car-type dropdown (combobox). Replaces chip rows so any number of types fits on one line.
+ *  - single:   value = "Sedan" | ""          (allowAll adds an "All cars" option = "")
+ *  - multiple: value = ["Sedan", ...]        (checkboxes, Select all / Clear)
+ * Rendered in a portal with fixed positioning, so cards/drawers with overflow never clip it.
+ */
+export function CarTypeChooser({ value, onChange, multiple = false, allowAll = false, size = "md", placeholder = "Choose car type", label, ariaLabel = "Car type", id: idProp }) {
+  const uid = useId();
+  const id = idProp ?? `cartype-${uid.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+  const searchRef = useRef(null);
+
+  const selected = multiple ? (Array.isArray(value) ? value : []) : value ? [value] : [];
+  const options = [...(allowAll && !multiple ? [""] : []), ...VEHICLE_TYPES];
+  const q = query.trim().toLowerCase();
+  const filtered = options.filter((o) => (o === "" ? "all cars" : o.toLowerCase()).includes(q));
+
+  const place = useCallback(() => {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.max(r.width, 256);
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+    const spaceBelow = window.innerHeight - r.bottom;
+    const up = spaceBelow < 320 && r.top > spaceBelow;
+    setPos({ left, width, ...(up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }), up });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    setActive(0);
+    const t = setTimeout(() => searchRef.current?.focus(), 30);
+    const onDown = (e) => {
+      if (!panelRef.current?.contains(e.target) && !triggerRef.current?.contains(e.target)) setOpen(false);
+    };
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [open, place]);
+
+  const close = () => {
+    setOpen(false);
+    setQuery("");
+    triggerRef.current?.focus();
   };
-  const pad = size === "sm" ? "px-2.5 py-1.5" : "px-3 py-2.5";
+  const choose = (o) => {
+    if (multiple) {
+      onChange(selected.includes(o) ? selected.filter((x) => x !== o) : VEHICLE_TYPES.filter((t) => t === o || selected.includes(t)));
+    } else {
+      onChange(o);
+      close();
+    }
+  };
+  const onKey = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((a) => Math.min(a + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(a - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filtered[active] !== undefined) choose(filtered[active]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  const coversAll = multiple && VEHICLE_TYPES.every((t) => selected.includes(t));
+  const summary = multiple
+    ? selected.length === 0
+      ? null
+      : coversAll
+        ? "All car types"
+        : selected.length <= 2
+          ? selected.join(", ")
+          : `${selected.slice(0, 2).join(", ")} +${selected.length - 2}`
+    : value
+      ? value
+      : allowAll
+        ? "All cars"
+        : null;
+  const h = size === "sm" ? "h-10 text-sm" : "h-11 text-sm";
+
   return (
-    <div className="flex flex-wrap gap-2" role={multiple ? "group" : "radiogroup"}>
-      {allowAll && (
-        <button
-          type="button"
-          role="radio"
-          aria-checked={!value}
-          onClick={() => onChange("")}
-          className={`rounded-xl text-sm font-semibold transition-colors duration-150 ${pad} ${!value ? "bg-ink-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"}`}
-        >
-          All cars
-        </button>
+    <div className="relative min-w-0">
+      {label && (
+        <label htmlFor={id} className="label">
+          {label}
+        </label>
       )}
-      {VEHICLE_TYPES.map((t) => {
-        const on = selected.includes(t);
-        return (
-          <motion.button
-            key={t}
-            type="button"
-            role={multiple ? "checkbox" : "radio"}
-            aria-checked={on}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => toggle(t)}
-            className={`flex items-center gap-2 rounded-xl text-sm font-semibold transition-colors duration-150 ${pad} ${on ? "bg-brand-600 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"}`}
-          >
-            <CarTypeIcon type={t} className={size === "sm" ? "h-4 w-9" : "h-5 w-11"} />
-            {t}
-          </motion.button>
-        );
-      })}
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={label ? undefined : ariaLabel}
+        aria-controls={`${id}-list`}
+        onClick={() => (open ? close() : setOpen(true))}
+        onKeyDown={(e) => {
+          if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={`input flex w-full min-w-0 items-center gap-2.5 text-left ${h} ${open ? "border-brand-500 ring-4 ring-brand-500/15" : ""}`}
+      >
+        {summary ? (
+          <>
+            {!multiple && value && <CarTypeIcon type={value} className="h-4 w-9 shrink-0 text-brand-600" />}
+            {multiple && (
+              <span className="shrink-0 rounded-md bg-brand-50 px-1.5 py-0.5 text-xs font-bold text-brand-700 tabular-nums">{selected.length}</span>
+            )}
+            <span className="min-w-0 flex-1 truncate font-medium text-ink-900">{summary}</span>
+          </>
+        ) : (
+          <span className="flex-1 truncate text-slate-400">{placeholder}</span>
+        )}
+        <ChevronDown className={`size-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {createPortal(
+        <AnimatePresence>
+          {open && pos && (
+            <motion.div
+              ref={panelRef}
+              initial={{ opacity: 0, y: pos.up ? 6 : -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: dur.standard, ease } }}
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+              style={{ position: "fixed", left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, zIndex: 70 }}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15"
+            >
+              <div className="relative border-b border-slate-100 p-2">
+                <Search className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setActive(0);
+                  }}
+                  onKeyDown={onKey}
+                  placeholder="Search car type…"
+                  aria-label="Search car type"
+                  aria-controls={`${id}-list`}
+                  aria-activedescendant={filtered[active] !== undefined ? `${id}-opt-${active}` : undefined}
+                  className="h-10 w-full rounded-xl bg-slate-50 pr-3 pl-9 text-sm text-ink-900 outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-brand-500/30"
+                />
+              </div>
+              <ul id={`${id}-list`} role="listbox" aria-multiselectable={multiple || undefined} className="max-h-64 overflow-y-auto p-1.5">
+                {filtered.length === 0 && <li className="px-3 py-6 text-center text-sm text-slate-500">No car type matches “{query}”</li>}
+                {filtered.map((o, i) => {
+                  const on = o === "" ? !value : selected.includes(o);
+                  return (
+                    <li
+                      key={o || "all"}
+                      id={`${id}-opt-${i}`}
+                      role="option"
+                      aria-selected={on}
+                      onMouseEnter={() => setActive(i)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => choose(o)}
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${i === active ? "bg-slate-100" : ""} ${on ? "font-semibold text-ink-900" : "text-slate-700"}`}
+                    >
+                      {multiple ? (
+                        <span className={`grid size-5 shrink-0 place-items-center rounded-md border-2 transition-colors ${on ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300"}`}>
+                          {on && <Check className="size-3.5" strokeWidth={3} />}
+                        </span>
+                      ) : null}
+                      {o === "" ? (
+                        <span className="grid h-4 w-9 shrink-0 place-items-center text-[10px] font-bold text-slate-400">ALL</span>
+                      ) : (
+                        <CarTypeIcon type={o} className={`h-4 w-9 shrink-0 ${on ? "text-brand-600" : "text-slate-400"}`} />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">{o === "" ? "All cars" : o}</span>
+                      {!multiple && on && <Check className="size-4 shrink-0 text-brand-600" strokeWidth={3} />}
+                    </li>
+                  );
+                })}
+              </ul>
+              {multiple && (
+                <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-2">
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => onChange([...VEHICLE_TYPES])} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50">
+                      Select all
+                    </button>
+                    <button type="button" onClick={() => onChange([])} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100">
+                      Clear
+                    </button>
+                  </div>
+                  <button type="button" onClick={close} className="rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-ink-800">
+                    Done
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
@@ -151,9 +328,8 @@ export function VehicleForm({ value, onChange, idPrefix }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <span className="label">Car type</span>
-        <CarTypeChooser value={value.type} onChange={(t) => set("type", t)} size="sm" />
+      <div className="sm:max-w-xs">
+        <CarTypeChooser label="Car type" id={id("type")} value={value.type} onChange={(t) => set("type", t)} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>

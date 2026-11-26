@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import Map, { GeolocateControl, Marker, NavigationControl, Popup } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../lib/maplibre-setup";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Crosshair, MapPin, Search, Store, Wrench } from "lucide-react";
 import { api, errorMessage } from "../lib/api";
@@ -160,7 +161,7 @@ export default function MapPage() {
           {status === "denied" && <p className="text-xs text-rose-600">Location permission was denied. Enable it in your browser to sort by distance.</p>}
           <div>
             <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">My car type</p>
-            <CarTypeChooser value={carType} onChange={chooseCarType} allowAll size="sm" />
+            <CarTypeChooser value={carType} onChange={chooseCarType} allowAll size="sm" ariaLabel="My car type" />
           </div>
         </div>
 

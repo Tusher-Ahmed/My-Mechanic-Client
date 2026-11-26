@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "../lib/maplibre-setup";
 import { Crosshair, MapPin } from "lucide-react";
 import { Button } from "./ui";
 import { DEFAULT_CENTER, MAP_STYLE, useGeolocation } from "../lib/map";

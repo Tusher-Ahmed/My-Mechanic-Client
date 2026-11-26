@@ -75,16 +75,25 @@ test("client showcase", async ({ page, browser, request }) => {
   const allShops = await count();
   const suvShops = await count(`?vehicleType=${encodeURIComponent("SUV / Jeep")}`);
   const shops = (n: number) => page.getByText(new RegExp(`^${n} shops?`));
+  let tiles = 0; // street-map tiles actually drawn (guards against a blank map, e.g. a broken map worker)
+  page.on("response", (r) => /openfreemap.org.*.pbf/.test(r.url()) && r.ok() && tiles++);
   await page.getByRole("link", { name: "Find mechanics" }).first().click();
   await expect(shops(allShops)).toBeVisible();
+  await expect.poll(() => tiles, { message: "street map tiles should load", timeout: 15_000 }).toBeGreaterThan(0);
   await pause(page, 2500); // tiles + pin drop
   await shot(page, "06-map");
   // car type filter: Gulshan Car Care only services Sedans & Hatchbacks
-  await page.getByRole("radio", { name: "SUV / Jeep" }).click();
+  await page.getByRole("combobox", { name: "My car type" }).click();
+  await page.getByRole("textbox", { name: "Search car type" }).fill("suv");
+  await expect(page.getByRole("option")).toHaveCount(1); // search narrows the list
+  await pause(page, 500);
+  await shot(page, "06a-map-car-type-search");
+  await page.keyboard.press("Enter");
   await expect(shops(suvShops)).toBeVisible();
   await pause(page, 1500);
   await shot(page, "06b-map-filter-suv");
-  await page.getByRole("radio", { name: "All cars" }).click();
+  await page.getByRole("combobox", { name: "My car type" }).click();
+  await page.getByRole("option", { name: "All cars" }).click();
   await expect(shops(allShops)).toBeVisible();
 
   await page.getByRole("button", { name: "Use my location" }).click();
@@ -103,7 +112,8 @@ test("client showcase", async ({ page, browser, request }) => {
 
   // step 1: the car
   const carCard = page.locator("#your-car");
-  await carCard.getByRole("radio", { name: "Sedan" }).click();
+  await carCard.getByRole("combobox", { name: "Car type" }).click();
+  await page.getByRole("option", { name: "Sedan" }).click();
   await carCard.getByLabel("Make").fill("Toyota");
   await carCard.getByLabel("Model").fill("Axio");
   await carCard.getByLabel(/Year/).fill("2016");

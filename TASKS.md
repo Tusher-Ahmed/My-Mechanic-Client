@@ -72,11 +72,11 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] S.4 Token version: password change / admin reset / account deletion revoke sessions instantly
 - [x] S.5 JWT algorithm pinned (HS256); weak JWT_SECRET refused in production
 - [x] S.6 Timing-safe login (no email enumeration); register rate limit; search/note length caps
-- [x] S.7 maplibre-gl upgraded to 6.19 (critical XSS advisory) – `npm audit`: 0 vulnerabilities
+- [x] S.7 maplibre-gl upgraded to 6.19 (critical XSS advisory) – `npm audit`: 0 vulnerabilities; worker bundled via Vite so the map renders in dev + production (showcase now asserts street tiles load)
 - [x] S.8 15 security tests (API-SEC-01…15) – all attacks fail safely
 
 ## Phase D – Requested improvements
-- [ ] D.1 Car type picker: searchable dropdown (single + multi select) instead of chip rows
+- [x] D.1 Car type picker: searchable dropdown (single + multi select, keyboard, portal) instead of chip rows
 - [ ] D.2 Live customer location shared with the mechanic after acceptance (consent, auto-stop, live map)
 
 ## Phase 5 – Deployment prep
