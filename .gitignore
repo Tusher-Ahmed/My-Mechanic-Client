@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+build/
+coverage/
+
+# env files (use .env.example as the template)
+.env
+.env.*
+!.env.example
+*.bak
+
+# logs / OS / editor
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
