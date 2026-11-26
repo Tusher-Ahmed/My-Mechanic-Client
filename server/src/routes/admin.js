@@ -12,6 +12,8 @@ import { badRequest, notFound } from "../utils/httpError.js";
 import * as S from "../validation/schemas.js";
 import { populateParties, shapeOrder } from "./orders.js";
 import { orderEvents } from "../services/notifications.js";
+import { Subscription } from "../models/Subscription.js";
+import { getPlanSettings, runReminders, savePlanSettings } from "../services/subscriptions.js";
 
 const router = Router();
 router.use(requireAuth("admin"));
@@ -164,6 +166,70 @@ router.get("/stats", async (_req, res) => {
     ordersByStatus,
     months,
     topShops: topShops.map((s) => ({ shopname: s._id, orders: s.orders, revenue: s.revenue })),
+  });
+});
+
+// ---------- subscriptions (platform revenue) ----------
+router.get("/plans", async (_req, res) => res.json(await getPlanSettings()));
+router.put("/plans", validate({ body: S.planSettings }), async (req, res) => res.json(await savePlanSettings(req.valid.body)));
+
+// grant / extend / end a garage's plan by hand (e.g. a free trial or a support case) – no payment recorded
+router.put("/mechanics/:id/subscription", validate({ params: S.idParams, body: S.grantSubscription }), async (req, res) => {
+  const m = await Mechanic.findById(req.valid.params.id);
+  if (!m) throw notFound();
+  m.subscriptionEndsAt = req.valid.body.endsAt ? new Date(req.valid.body.endsAt) : undefined;
+  if (req.valid.body.plan) m.subscriptionPlan = req.valid.body.plan;
+  m.subscriptionReminders = {};
+  await m.save();
+  res.json(m);
+});
+
+// run the expiry-reminder job now (it also runs every hour)
+router.post("/subscriptions/run-reminders", async (_req, res) => res.json(await runReminders()));
+
+// GET /api/admin/revenue – subscription income (the platform's revenue, separate from garages' order revenue)
+router.get("/revenue", async (_req, res) => {
+  const now = new Date();
+  const monthStart = (offset) => new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const since = monthStart(-11);
+  const paid = { status: "paid" };
+
+  const [allTime, monthly, byPlan, byKind, recent, mechanics] = await Promise.all([
+    Subscription.aggregate([{ $match: paid }, { $group: { _id: null, revenue: { $sum: "$amount" }, count: { $sum: 1 } } }]),
+    Subscription.aggregate([
+      { $match: { ...paid, paidAt: { $gte: since } } },
+      { $group: { _id: { y: { $year: "$paidAt" }, m: { $month: "$paidAt" } }, revenue: { $sum: "$amount" }, count: { $sum: 1 } } },
+    ]),
+    Subscription.aggregate([{ $match: paid }, { $group: { _id: "$plan", revenue: { $sum: "$amount" }, count: { $sum: 1 } } }]),
+    Subscription.aggregate([{ $match: paid }, { $group: { _id: "$kind", revenue: { $sum: "$amount" }, count: { $sum: 1 } } }]),
+    Subscription.find(paid).sort({ paidAt: -1 }).limit(20).populate("mechanic", "shopname username"),
+    Mechanic.find().select("shopname username subscriptionPlan subscriptionEndsAt"),
+  ]);
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = monthStart(i - 11);
+    const hit = monthly.find((x) => x._id.y === d.getFullYear() && x._id.m === d.getMonth() + 1);
+    return { month: d.toLocaleString("en-US", { month: "short" }), year: d.getFullYear(), revenue: hit?.revenue ?? 0, count: hit?.count ?? 0 };
+  });
+  const day = 86_400_000;
+  const garage = (m) => ({ _id: m._id, shopname: m.shopname, username: m.username, plan: m.subscriptionPlan ?? null, endsAt: m.subscriptionEndsAt ?? null });
+  const active = mechanics.filter((m) => m.subscriptionEndsAt > now);
+
+  res.json({
+    allTime: { revenue: allTime[0]?.revenue ?? 0, payments: allTime[0]?.count ?? 0 },
+    thisMonth: months[11].revenue,
+    lastMonth: months[10].revenue,
+    months,
+    byPlan: ["monthly", "yearly"].map((p) => ({ plan: p, revenue: byPlan.find((x) => x._id === p)?.revenue ?? 0, count: byPlan.find((x) => x._id === p)?.count ?? 0 })),
+    byKind: ["intro", "renewal"].map((k) => ({ kind: k, revenue: byKind.find((x) => x._id === k)?.revenue ?? 0, count: byKind.find((x) => x._id === k)?.count ?? 0 })),
+    garages: {
+      active: active.length,
+      total: mechanics.length,
+      expiringSoon: active.filter((m) => m.subscriptionEndsAt - now <= 7 * day).map(garage),
+      expired: mechanics.filter((m) => m.subscriptionEndsAt && m.subscriptionEndsAt <= now).map(garage),
+      neverSubscribed: mechanics.filter((m) => !m.subscriptionEndsAt).map(garage),
+    },
+    recent: recent.map((s) => ({ _id: s._id, tranId: s.tranId, plan: s.plan, kind: s.kind, amount: s.amount, paidAt: s.paidAt, gateway: s.gateway, shopname: s.mechanic?.shopname ?? "Deleted garage" })),
   });
 });
 

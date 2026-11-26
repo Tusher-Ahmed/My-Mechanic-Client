@@ -41,6 +41,13 @@ const MechanicSchema = new Schema({
     ),
     default: () => ({}),
   },
+  // subscription: the garage is on the map / bookable only while subscriptionEndsAt is in the future
+  subscriptionPlan: { type: String, enum: ["monthly", "yearly"] },
+  subscriptionEndsAt: { type: Date, index: true },
+  subscriptionReminders: {
+    type: new Schema({ d7: Date, d1: Date, expired: Date }, { _id: false }),
+    default: () => ({}),
+  },
   // car types this garage works on (all by default)
   vehicleTypes: {
     type: [{ type: String, enum: { values: VEHICLE_TYPES, message: "Invalid car type" } }],

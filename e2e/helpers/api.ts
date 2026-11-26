@@ -42,8 +42,28 @@ export async function registerMechanic(request: APIRequestContext, overrides: Re
     ],
     ...overrides,
   };
-  const res = await request.post("auth/mechanic/register", { data: body });
-  return { res, body, session: (await res.json()) as Session };
+  // by default the garage gets an active plan (silent admin grant – no payment, no notification) so it's on
+  // the map and bookable; subscription tests pass subscribe: false and use buyPlan() instead
+  const { subscribe = true, ...data } = body as typeof body & { subscribe?: boolean };
+  const res = await request.post("auth/mechanic/register", { data });
+  const session = (await res.json()) as Session;
+  if (subscribe && res.ok()) await grantPlan(request, session.account._id, 30);
+  return { res, body: data, session };
+}
+
+let adminToken: string | null = null;
+/** Admin sets a garage's plan end date directly (days from now; negative = already expired, null = none). */
+export async function grantPlan(request: APIRequestContext, mechanicId: string, days: number | null) {
+  adminToken ??= await loginAdmin(request);
+  const endsAt = days == null ? null : new Date(Date.now() + days * 86_400_000).toISOString();
+  return request.put(`admin/mechanics/${mechanicId}/subscription`, { data: { endsAt, plan: "monthly" }, ...auth(adminToken) });
+}
+
+/** Mechanic buys a plan through the demo checkout. Returns the checkout + payment results. */
+export async function buyPlan(request: APIRequestContext, token: string, plan: "monthly" | "yearly" = "monthly", outcome: "success" | "cancel" = "success") {
+  const checkout = await (await request.post("subscriptions/checkout", { data: { plan }, ...auth(token) })).json();
+  const pay = await request.post(`subscriptions/demo/${checkout.tranId}/pay`, { data: { outcome }, ...auth(token) });
+  return { checkout, pay: await pay.json(), payRes: pay };
 }
 
 export async function loginAdmin(request: APIRequestContext) {

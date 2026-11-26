@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 
-export const NOTIFICATION_TYPES = ["order_new", "order_accepted", "order_completed", "order_cancelled", "order_updated", "system"];
+export const NOTIFICATION_TYPES = ["order_new", "order_accepted", "order_completed", "order_cancelled", "order_updated", "subscription", "system"];
 
 const NotificationSchema = new Schema(
   {

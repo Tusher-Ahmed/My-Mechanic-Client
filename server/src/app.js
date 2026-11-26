@@ -10,6 +10,7 @@ import orderRoutes from "./routes/orders.js";
 import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
 import notificationRoutes from "./routes/notifications.js";
+import subscriptionRoutes from "./routes/subscriptions.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { rejectMongoOperators } from "./middleware/validate.js";
 
@@ -44,6 +45,7 @@ export function createApp() {
   app.use("/api/messages", messageRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/notifications", notificationRoutes);
+  app.use("/api/subscriptions", subscriptionRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -12,6 +12,7 @@ import { orderEvents, publish } from "../services/notifications.js";
 import * as S from "../validation/schemas.js";
 import { approximate, distanceKm } from "../utils/geo.js";
 import { suggestedEtaMinutes, travelFeeFor } from "../utils/pricing.js";
+import { isActive } from "../services/subscriptions.js";
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (
 
   const mechanic = await Mechanic.findById(mechanicId);
   if (!mechanic) throw notFound("Shop not found");
+  if (!isActive(mechanic)) throw badRequest(`${mechanic.shopname} isn't taking bookings right now. Try another garage on the map.`);
   if (!mechanic.vehicleTypes.includes(vehicle.type)) {
     throw badRequest(`${mechanic.shopname} doesn't service ${vehicle.type} cars. Try another garage.`);
   }

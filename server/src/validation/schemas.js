@@ -178,6 +178,25 @@ export const contactMessage = z.object({
   message: trimmed(1, 3000, "Message"),
 });
 
+/* ---------- subscriptions ---------- */
+export const checkout = z.object({ plan: z.enum(["monthly", "yearly"], { error: "Choose a plan" }) });
+export const demoPay = z.object({ outcome: z.enum(["success", "cancel"], { error: "Invalid outcome" }) });
+export const tranParams = z.object({ tranId: z.string().regex(/^MMS-[A-Z0-9-]{6,40}$/, "Invalid transaction") });
+const planPrice = z.object({
+  label: z.string().trim().min(1).max(30),
+  days: z.coerce.number().int().min(1).max(730),
+  price: z.coerce.number().min(0).max(1_000_000),
+  introPrice: z.coerce.number().min(0).max(1_000_000),
+});
+export const planSettings = z.object({
+  plans: z.object({ monthly: planPrice, yearly: planPrice }),
+  renewalDiscountPercent: z.coerce.number().min(0).max(90),
+});
+export const grantSubscription = z.object({
+  plan: z.enum(["monthly", "yearly"]).optional(),
+  endsAt: z.union([z.iso.datetime({ offset: true }), z.null()]),
+});
+
 /* ---------- admin ---------- */
 export const adminUserCreate = z.object({ username: name, email, phone, password, vehicles: vehicles.optional() });
 export const adminUserUpdate = z.object({
