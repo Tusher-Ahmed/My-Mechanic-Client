@@ -3,6 +3,7 @@ import { Order } from "../models/Order.js";
 import { Mechanic } from "../models/Mechanic.js";
 import { requireAuth } from "../middleware/auth.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
+import { orderEvents } from "../services/notifications.js";
 
 const router = Router();
 
@@ -50,6 +51,7 @@ router.post("/", requireAuth("user"), async (req, res) => {
     totalPrice,
     note,
   });
+  await orderEvents.created(await populateParties(Order.findById(order._id)));
   res.status(201).json(order);
 });
 
@@ -79,6 +81,7 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), async (req, res) =>
   order.status = next;
   await order.save();
   const populated = await populateParties(Order.findById(order._id));
+  await orderEvents.statusChanged(populated, role);
   res.json(shapeOrder(populated, role));
 });
 

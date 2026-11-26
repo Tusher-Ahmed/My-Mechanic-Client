@@ -8,6 +8,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { badRequest, notFound } from "../utils/httpError.js";
 import { pick } from "../utils/pick.js";
 import { populateParties, shapeOrder } from "./orders.js";
+import { orderEvents } from "../services/notifications.js";
 
 const router = Router();
 router.use(requireAuth("admin"));
@@ -78,7 +79,9 @@ router.patch("/orders/:id/status", async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!order) throw notFound("Order not found");
-  res.json(shapeOrder(await populateParties(Order.findById(order._id)), "admin"));
+  const populated = await populateParties(Order.findById(order._id));
+  await orderEvents.statusChanged(populated, "admin");
+  res.json(shapeOrder(populated, "admin"));
 });
 
 router.delete("/orders/:id", async (req, res) => {

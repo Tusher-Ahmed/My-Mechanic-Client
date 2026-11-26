@@ -9,6 +9,7 @@ import mechanicRoutes from "./routes/mechanics.js";
 import orderRoutes from "./routes/orders.js";
 import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
+import notificationRoutes from "./routes/notifications.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 
 export function createApp() {
@@ -26,6 +27,8 @@ export function createApp() {
     })
   );
   app.use(express.json({ limit: "100kb" }));
+  // never write login tokens (used by the notification stream) into the logs
+  morgan.token("url", (req) => req.originalUrl.replace(/token=[^&]+/, "token=***"));
   app.use(morgan(env.isProduction ? "combined" : "dev"));
 
   app.get("/", (_req, res) => res.json({ name: "My Mechanic API", status: "ok" }));
@@ -38,6 +41,7 @@ export function createApp() {
   app.use("/api/orders", orderRoutes);
   app.use("/api/messages", messageRoutes);
   app.use("/api/admin", adminRoutes);
+  app.use("/api/notifications", notificationRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

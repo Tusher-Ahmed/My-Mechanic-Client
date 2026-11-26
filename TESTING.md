@@ -32,7 +32,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 46 tests
+## 1. API tests (`e2e/tests/api`) – 53 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -104,6 +104,17 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-ADM-09 | Read and delete contact messages | ✅ |
 | API-ADM-10 | Dashboard stats shape (counts, revenue, 6 months, top shops) | ✅ |
 
+### Notifications – `notifications.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-NOTIF-01 | New order notifies the mechanic (title, body, link, unread count) | ✅ |
+| API-NOTIF-02 | Accept and complete notify the customer | ✅ |
+| API-NOTIF-03 | Cancel / decline notify only the other party | ✅ |
+| API-NOTIF-04 | Mark one as read, then mark all as read | ✅ |
+| API-NOTIF-05 | Notifications are private (401 / 404 for others) | ✅ |
+| API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
+| API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
+
 ---
 
 ## 2. Client UI tests (`e2e/tests/client`) – browser, Chromium
@@ -126,6 +137,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | UI-CL-14 | Contact form sends a message | ⏳ |
 | UI-CL-15 | Protected pages redirect guests | ⏳ |
 | UI-CL-16 | Layout works at phone width (no horizontal scroll) | ⏳ |
+| UI-CL-17 | Notification bell: badge appears live, panel lists it, mark all read | ⏳ |
 
 ## 3. Admin UI tests (`e2e/tests/admin`) – browser, Chromium
 

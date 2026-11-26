@@ -24,11 +24,18 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] 2.9 Central error handler, `/api/health` route, CORS limited to the frontend URLs
 - [x] 2.10 Test all endpoints locally (46 Playwright API tests passing – see TESTING.md)
 
+## Phase N – Notifications (replaces the old count badge)
+- [x] N.1 Notification model (recipient, type, title, body, link, read) with 60-day auto-cleanup
+- [x] N.2 Auto-create on order events (new / accepted / completed / cancelled / admin update)
+- [x] N.3 Real-time delivery with Server-Sent Events + list / mark read / mark all read endpoints
+- [x] N.4 API tests API-NOTIF-01…07
+- [ ] N.5 Client: bell with live badge, dropdown panel, toasts, auto-refresh dashboards
+
 ## Phase 3 – Client (`client/`)
 - [ ] 3.1 Move from Create React App to Vite + React 19
 - [ ] 3.2 Replace Bootstrap/reactstrap with Tailwind CSS
 - [ ] 3.3 React Router 7, auth context (token in localStorage), shared axios client using `VITE_API_URL`
-- [ ] 3.4 Upgrade map to `react-map-gl` 8 (Mapbox)
+- [ ] 3.4 Map: OpenStreetMap via MapLibre + `react-map-gl` 8 (free, no API key – old Mapbox token was dead)
 - [ ] 3.5 Redesign pages: Home (hero, services, FAQ), Map, Store, User account, Mechanic account, Mechanic register, About, Contact, Login/Register dialogs
 - [ ] 3.6 Animations (Framer Motion), responsive mobile layout, toasts for feedback
 - [ ] 3.7 Compress images (src was 25 MB)
@@ -43,7 +50,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin (46 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (53 passing)
 - [x] T.3 TESTING.md test-case register
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
 - [ ] T.5 Admin UI tests (UI-AD-01…08) after Phase 4
@@ -58,5 +65,5 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [ ] 6.1 MongoDB Atlas free M0 cluster → connection string
 - [ ] 6.2 Render: deploy `server/` with env vars
 - [ ] 6.3 Vercel: deploy `client/` and `admin/` with `VITE_API_URL`
-- [ ] 6.4 Run admin seed script, restrict Mapbox token to the new URLs
+- [ ] 6.4 Run admin seed script on the production database
 - [ ] 6.5 Push branch / merge to `main`
