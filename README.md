@@ -19,8 +19,22 @@ don't know what it will cost. **My Mechanic** shows the garages around you on a 
 prices. You book what you need (or an inspection if you don't know the problem) and follow the mechanic as
 they come to you.
 
-It started as my university project (React 17 + Express, three repositories) and was rebuilt as one
-repository with a modern stack, a real-time order flow, proper security and automated tests.
+## Project history
+
+I built My Mechanic in **2022** as my university project, using React 17 (Create React App), Express and
+MongoDB, split across three repositories (website, admin panel and API).
+
+Coming back to it years later, the old project no longer worked properly: many packages were outdated or
+broken (some with security warnings), Create React App was no longer maintained, and it had bugs from my
+early days as a developer. Instead of patching it, I **rearranged and rebuilt the project**:
+
+- merged the three repositories into **this one repository** (website, admin panel, API and tests together);
+- moved to current versions of everything (React 19, Vite, Express 5, Mongoose 8) and replaced broken packages;
+- fixed the old bugs and redesigned the website and admin panel;
+- added real-time notifications, live location, proper security and automated tests, plus new features such as
+  inspections, garage approval and subscriptions.
+
+The original repositories are kept for reference.
 
 ## Features
 
