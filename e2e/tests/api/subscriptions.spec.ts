@@ -44,15 +44,37 @@ test("API-SUB-02 first plan uses the starter price, activates the garage and not
   expect((await notes(request, mech.session.token))[0]).toMatchObject({ type: "subscription", title: "Payment received – your monthly plan is active" });
 });
 
-test("API-SUB-03 returning customers get the loyalty discount; renewing early stacks the days", async ({ request }) => {
+test("API-SUB-03 no renewing while a plan is running; afterwards returning customers get the loyalty price", async ({ request }) => {
   const mech = await registerMechanic(request, { subscribe: false });
   await buyPlan(request, mech.session.token, "monthly"); // ৳99 starter
   expect((await me(request, mech.session.token)).prices.monthly).toMatchObject({ kind: "renewal", amount: 239, discountPercent: 20 }); // 299 − 20 %
+
+  // plan is active → checkout refused (monthly or yearly)
+  for (const plan of ["monthly", "yearly"]) {
+    const res = await request.post("subscriptions/checkout", { data: { plan }, ...auth(mech.session.token) });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).message).toContain("You can renew once it ends");
+  }
+
+  // once it has ended, renewing works at the loyalty price and restarts from today
+  await grantPlan(request, mech.session.account._id, -1);
   const { checkout } = await buyPlan(request, mech.session.token, "monthly");
   expect(checkout).toMatchObject({ kind: "renewal", amount: 239 });
   const s = await me(request, mech.session.token);
-  expect(s.daysLeft).toBe(60); // second month starts when the first ends
+  expect(s.daysLeft).toBe(30);
   expect(s.history.map((h) => h.amount)).toEqual([239, 99]);
+});
+
+test("API-SUB-03b a checkout opened before activation can't be paid once a plan is running", async ({ request }) => {
+  const mech = await registerMechanic(request, { subscribe: false });
+  const first = await (await request.post("subscriptions/checkout", { data: { plan: "monthly" }, ...auth(mech.session.token) })).json();
+  const second = await (await request.post("subscriptions/checkout", { data: { plan: "yearly" }, ...auth(mech.session.token) })).json(); // e.g. another tab
+  await request.post(`subscriptions/demo/${first.tranId}/pay`, { data: { outcome: "success" }, ...auth(mech.session.token) });
+  const res = await request.post(`subscriptions/demo/${second.tranId}/pay`, { data: { outcome: "success" }, ...auth(mech.session.token) });
+  expect(res.status()).toBe(400);
+  const s = await me(request, mech.session.token);
+  expect(s.daysLeft).toBe(30); // only the first plan counted
+  expect(s.history.find((h) => h.tranId === second.tranId).status).toBe("cancelled");
 });
 
 test("API-SUB-04 cancelled payments don't activate; payments can't be reused or paid by someone else", async ({ request }) => {
@@ -120,6 +142,7 @@ test.describe.serial("Admin revenue & plan prices", () => {
     const before = await (await request.get("admin/revenue", auth(admin))).json();
     const mech = await registerMechanic(request, { subscribe: false });
     await buyPlan(request, mech.session.token, "yearly"); // 1499 intro
+    await grantPlan(request, mech.session.account._id, -1); // the year is over
     await buyPlan(request, mech.session.token, "monthly"); // 239 renewal
     const after = await (await request.get("admin/revenue", auth(admin))).json();
 

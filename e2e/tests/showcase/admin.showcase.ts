@@ -46,7 +46,16 @@ async function seed(request: APIRequestContext) {
     // each garage buys a plan through the demo checkout (yearly for the first, renewals for the second)
     const token = mechs[i].token;
     const plans = i === 0 ? ["yearly"] : i === 1 ? ["monthly", "monthly"] : ["monthly"];
-    for (const plan of plans) {
+    for (const [n, plan] of plans.entries()) {
+      if (n > 0) {
+        // renewing only works after the previous plan ended – let the admin end it first
+        const admin = await post("auth/admin/login", TEST_ADMIN);
+        const res = await request.put(`${API_URL}/admin/mechanics/${mechs[i].account._id}/subscription`, {
+          data: { endsAt: new Date(Date.now() - 86_400_000).toISOString() },
+          headers: { Authorization: `Bearer ${admin.token}` },
+        });
+        if (!res.ok()) throw new Error(`end plan: ${res.status()}`);
+      }
       const checkout = await post("subscriptions/checkout", { plan }, token);
       await post(`subscriptions/demo/${checkout.tranId}/pay`, { outcome: "success" }, token);
     }

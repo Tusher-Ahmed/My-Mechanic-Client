@@ -235,7 +235,7 @@ No map API key is needed – maps use free OpenStreetMap data.
 All tests use **Playwright** and run against a separate test database (`my-mechanic-e2e`, wiped on every run),
 so development data is never touched. See **[TESTING.md](TESTING.md)** for every case.
 
-- **106 API tests** – authentication, orders, notifications, live location, travel charges, arrival time and
+- **107 API tests** – authentication, orders, notifications, live location, travel charges, arrival time and
   verification codes, subscriptions, admin, and **15 security tests that perform real attacks**
   (NoSQL injection, forged tokens, price manipulation, mass assignment, brute force …).
 - **6 browser walk-throughs** against the production builds – the full customer → mechanic → admin journey
@@ -273,7 +273,7 @@ The platform earns from **garage subscriptions**:
 | Yearly | ৳1,499 for 365 days | ৳2,499 | 20 % off renewals |
 
 - Only garages with an active plan appear on the map and can receive bookings.
-- Reminders 7 days and 1 day before expiry, and when it expires; renewing early never loses days.
+- One plan at a time: renewal opens when the current plan ends (reminders 7 days and 1 day before, and on expiry).
 - Prices and the discount are editable in the admin panel.
 - Payments currently use a **demo checkout** (no real money). The payment step is isolated in
   `server/src/routes/subscriptions.js` (`startCheckout()`), so a gateway such as SSLCommerz or bKash can be added later.

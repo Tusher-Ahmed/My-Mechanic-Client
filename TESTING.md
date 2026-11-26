@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 106 tests
+## 1. API tests (`e2e/tests/api`) – 107 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -310,7 +310,8 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 |---|---|---|
 | API-SUB-01 | Garage without a plan: hidden from the map, bookings refused, store page says not accepting | ✅ |
 | API-SUB-02 | First plan at the starter price (৳99 / ৳1,499), activates the garage, notifies the mechanic | ✅ |
-| API-SUB-03 | Returning customers get the loyalty discount (20 %); renewing early stacks the days | ✅ |
+| API-SUB-03 | No renewing while a plan is running (checkout refused); afterwards the loyalty price (20 %) applies | ✅ |
+| API-SUB-03b | A checkout opened before activation (e.g. second tab) can’t be paid once a plan is running | ✅ |
 | API-SUB-04 | Cancelled payments don't activate; no re-use; can't pay someone else's checkout | ✅ |
 | API-SUB-05 | Expired plan hides the garage; renewal at the discount brings it back from today | ✅ |
 | API-SUB-06 | Reminders at 7 days, 1 day and on expiry – each sent once | ✅ |

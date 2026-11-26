@@ -50,7 +50,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (106 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (107 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3

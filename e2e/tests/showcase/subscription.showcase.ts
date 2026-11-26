@@ -59,8 +59,15 @@ test("subscription showcase", async ({ page, request, browser }) => {
   await expect(page.getByTestId("renew-banner")).toHaveCount(0); // live – no banner
   expect(await onMap()).toBe(1);
   await page.getByRole("tab", { name: "Subscription" }).click();
+  // while the plan has plenty of time left the page leads with "Your plan" – no renew buttons
+  await expect(page.getByTestId("plan-status")).toContainText("Your plan");
   await expect(page.getByTestId("plan-status")).toContainText("Monthly plan · active");
-  await expect(page.getByTestId("plan-monthly")).toContainText("20% loyalty discount"); // next renewal is discounted
+  await expect(page.getByTestId("days-left")).toHaveText("30");
+  // while a plan is running there is nothing to buy – renewal opens when it ends
+  await expect(page.getByTestId("plan-monthly")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Renew|Extend|Get started/ })).toHaveCount(0);
+  await expect(page.getByTestId("renew-locked")).toContainText("Renewal opens when your plan ends");
+  await expect(page.getByTestId("renew-locked")).toContainText("20% off");
   await pause(page, 800);
   await shot(page, "05-subscription-active", true);
 

@@ -117,11 +117,11 @@ export async function runReminders(now = new Date()) {
     } else if (left > 0 && left <= day && !flags.d1) {
       flags.d1 = now;
       flags.d7 = flags.d7 ?? now;
-      message = { title: "Your plan ends tomorrow", body: `Renew today with ${settings.renewalDiscountPercent}% off to stay on the map.` };
+      message = { title: "Your plan ends tomorrow", body: `You can renew with ${settings.renewalDiscountPercent}% off as soon as it ends.` };
       sent.d1++;
     } else if (left > day && left <= 7 * day && !flags.d7) {
       flags.d7 = now;
-      message = { title: `Your plan ends in ${Math.ceil(left / day)} days`, body: `Renew early with ${settings.renewalDiscountPercent}% off – the new period starts when the current one ends.` };
+      message = { title: `Your plan ends in ${Math.ceil(left / day)} days`, body: `When it ends, renew with ${settings.renewalDiscountPercent}% off to stay on the map.` };
       sent.d7++;
     }
     if (message) {
