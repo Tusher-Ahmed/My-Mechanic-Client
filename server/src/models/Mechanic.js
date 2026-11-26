@@ -25,10 +25,21 @@ const MechanicSchema = new Schema({
     maxlength: [100, "Shop name must be at most 100 characters"],
   },
   address: { type: String, trim: true, maxlength: 200 },
+  // trade licence: checked by an admin before the garage goes live (never shown publicly)
+  tradeLicense: { type: String, trim: true, uppercase: true, maxlength: 40, unique: true, sparse: true },
+  // self-registered garages wait for an admin; garages created by an admin are approved at once.
+  // Garages from before approvals existed have no value and count as approved.
+  approvalStatus: { type: String, enum: ["pending", "approved", "rejected"], index: true },
+  approval: {
+    type: new Schema({ at: Date, by: { type: Schema.Types.ObjectId, ref: "Admin" }, reason: { type: String, trim: true, maxlength: 300 } }, { _id: false }),
+    default: undefined,
+  },
   latitude: { type: Number, required: [true, "Shop location is required"], min: -90, max: 90 },
   longitude: { type: Number, required: [true, "Shop location is required"], min: -180, max: 180 },
   services: { type: [ServiceSchema], default: [] },
   // travel charge for home service: free within freeWithinKm, else base + perKm × distance (৳, rounded to 10)
+  // fee for an inspection visit ("not sure what's wrong") – each garage sets its own, required when opening a shop
+  inspectionFee: { type: Number, min: [0, "Inspection fee can't be negative"], max: 100_000, default: 300 },
   travelPricing: {
     type: new Schema(
       {
@@ -58,6 +69,6 @@ const MechanicSchema = new Schema({
 MechanicSchema.plugin(accountPlugin);
 
 /** Fields that anyone (not logged in) may see on the map / store page. */
-export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services vehicleTypes travelPricing createdAt";
+export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services vehicleTypes travelPricing inspectionFee createdAt";
 
 export const Mechanic = model("Mechanic", MechanicSchema);

@@ -4,6 +4,7 @@
  */
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { ADMIN_URL, API_URL, TEST_ADMIN } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -27,6 +28,8 @@ async function seed(request: APIRequestContext) {
     mechs.push(
       await post("auth/mechanic/register", {
         shopname: `${shopname}`,
+        inspectionFee: 300 + i * 50,
+        tradeLicense: `TRAD/DNCC/20${i}/${tag}`,
         username,
         email: `adm-garage${i}-${tag}@showcase.test`,
         phone: `0191100000${i}`,
@@ -43,17 +46,27 @@ async function seed(request: APIRequestContext) {
         ],
       })
     );
+    await approveQuietly(request, mechs[i].account._id, mechs[i].token);
     // each garage buys a plan through the demo checkout (yearly for the first, renewals for the second)
     const token = mechs[i].token;
     const plans = i === 0 ? ["yearly"] : i === 1 ? ["monthly", "monthly"] : ["monthly"];
-    for (const plan of plans) {
+    for (const [n, plan] of plans.entries()) {
+      if (n > 0) {
+        // renewing only works after the previous plan ended – let the admin end it first
+        const admin = await post("auth/admin/login", TEST_ADMIN);
+        const res = await request.put(`${API_URL}/admin/mechanics/${mechs[i].account._id}/subscription`, {
+          data: { endsAt: new Date(Date.now() - 86_400_000).toISOString() },
+          headers: { Authorization: `Bearer ${admin.token}` },
+        });
+        if (!res.ok()) throw new Error(`end plan: ${res.status()}`);
+      }
       const checkout = await post("subscriptions/checkout", { plan }, token);
       await post(`subscriptions/demo/${checkout.tranId}/pay`, { outcome: "success" }, token);
     }
   }
-  // a garage that never paid (shows up under "Hidden from the map")
+  // a garage that just registered: waits for approval (and has no plan yet)
   await post("auth/mechanic/register", {
-    shopname: "Sleepy Garage", username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
+    shopname: "Sleepy Garage", inspectionFee: 250, tradeLicense: `TRAD/DSCC/77/${tag}`, username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
     latitude: 23.75, longitude: 90.39, services: [{ serviceName: "Car wash", price: 300 }],
   });
   const people = ["Nusrat Jahan", "Arif Rahman", "Sadia Islam", "Tanvir Ahmed"];
@@ -87,7 +100,7 @@ async function seed(request: APIRequestContext) {
       await request.post(`${API_URL}/orders/${order._id}/verify`, { data: { code }, headers: h });
       await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "completed" }, headers: h });
     }
-    if (status === "cancelled") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "cancelled" }, headers: h });
+    if (status === "cancelled") await request.patch(`${API_URL}/orders/${order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, headers: h });
   }
   await post("messages", { email: "rafi@example.com", subject: "Can I book for my motorbike?", message: "Hi! Do you also support motorbikes? My bike broke down near Farmgate.\n\nThanks, Rafi" });
   await post("messages", { email: "garage.owner@example.com", subject: "Partnership", message: "I own three garages in Chattogram and would like to join the platform." });

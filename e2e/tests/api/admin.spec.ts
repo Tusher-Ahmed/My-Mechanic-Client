@@ -115,7 +115,9 @@ test.describe("Orders, messages and stats", () => {
     const stats = await (await request.get("admin/stats", auth(token))).json();
     expect(stats.users).toBeGreaterThanOrEqual(1);
     expect(stats.mechanics).toBeGreaterThanOrEqual(1);
-    expect(stats.revenue).toBeGreaterThanOrEqual(1300);
+    expect(stats.serviceRevenue).toBeGreaterThanOrEqual(1300);
+    expect(stats.travelRevenue).toBeGreaterThanOrEqual(0); // travel charges are reported separately
+    expect(stats.months[5]).toEqual(expect.objectContaining({ serviceRevenue: expect.any(Number), travelRevenue: expect.any(Number) }));
     expect(stats.months).toHaveLength(6);
     expect(Object.keys(stats.ordersByStatus).sort()).toEqual(["accepted", "cancelled", "completed", "pending"]);
     expect(stats.topShops.length).toBeGreaterThan(0);

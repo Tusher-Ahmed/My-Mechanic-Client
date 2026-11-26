@@ -25,7 +25,11 @@ api.interceptors.response.use(
 export function errorMessage(err) {
   if (err?.response?.data?.message) return err.response.data.message;
   if (err?.code === "ERR_NETWORK" || err?.code === "ECONNABORTED") {
-    return "Can't reach the server right now. If it was sleeping it can take ~30s to wake up – please try again.";
+    return "Can't reach the server right now. The free server sleeps when unused and can take up to a minute to wake up – please try again.";
   }
   return "Something went wrong. Please try again.";
 }
+
+// The free API host sleeps after 15 idle minutes; nudge it awake as soon as the app opens,
+// so it's ready by the time the visitor clicks something.
+api.get("/health", { timeout: 90_000 }).catch(() => {});

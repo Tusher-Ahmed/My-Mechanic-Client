@@ -5,6 +5,7 @@
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { API_URL } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -23,6 +24,8 @@ async function seed(request) {
   for (const [i, g] of GARAGES.entries()) {
     const res = await request.post(`${API_URL}/auth/mechanic/register`, {
       data: {
+        inspectionFee: 300,
+        tradeLicense: `TRAD/DNCC/10${i}/2026`,
         ...g,
         email: `garage${i + 1}@showcase.test`,
         phone: `0182233440${i}`,
@@ -33,6 +36,7 @@ async function seed(request) {
     });
     const m = await res.json();
     mechanics.push(m);
+    await approveQuietly(request, m.account._id, m.token); // an admin checked the trade licence
     // garages need an active plan to be on the map – buy one through the demo checkout
     const h = { headers: { Authorization: `Bearer ${m.token}` } };
     const checkout = await (await request.post(`${API_URL}/subscriptions/checkout`, { data: { plan: "monthly" }, ...h })).json();
@@ -262,7 +266,10 @@ test("client showcase", async ({ page, browser, request }) => {
   // 5. Mechanic shop editor + registration wizard + other pages
   // the garage's own business numbers (the completed ৳2,220 job)
   await mech.getByRole("tab", { name: "Revenue" }).click();
-  await expect(mech.getByTestId("mechanic-revenue")).toContainText("৳2,220");
+  // service revenue and travel charges are shown separately (৳2,000 services + ৳220 travel)
+  await expect(mech.getByTestId("rev-services-total")).toContainText("৳2,000");
+  await expect(mech.getByTestId("rev-travel-month")).toContainText("৳220");
+  await expect(mech.getByTestId("travel-section")).toContainText("from 1 home job");
   await pause(mech, 1500);
   await mech.screenshot({ path: path.join(OUT, "17f-mechanic-revenue.png"), fullPage: true });
 

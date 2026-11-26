@@ -50,7 +50,7 @@ export const orderEvents = {
       recipient: order.mechanic._id,
       role: "mechanic",
       type: "order_new",
-      title: `New order ${ref(order)} from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
+      title: `New ${order.kind === "inspection" ? "inspection" : "order"} ${ref(order)} from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
       body: `${order.vehicle ? vehicleLabel(order.vehicle) + " – " : ""}${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,
@@ -78,11 +78,38 @@ export const orderEvents = {
         );
         break;
       case "completed":
-        toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
+        if (order.kind === "inspection") {
+          const rec = order.findings?.recommended ?? [];
+          toUser(
+            "order_completed",
+            `Inspection finished – ${order.shopname} found the problem`,
+            [
+              order.findings?.note,
+              rec.length ? `Recommended: ${rec.map((s) => s.serviceName).join(", ")}. Book them from your order – no travel charge again within 24 h.` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .slice(0, 290)
+          );
+        } else toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
         break;
       case "cancelled":
-        if (by !== "user") toUser("order_cancelled", `${order.shopname} declined your order`, "Try another mechanic nearby on the map.");
-        if (by !== "mechanic") toMechanic("order_cancelled", `${order.user.username} cancelled an order`, list(order.services));
+        {
+          const why = order.cancellation?.reason ? `Reason: ${order.cancellation.reason}.` : "";
+          const declined = by === "mechanic" && !order.verifiedAt && !order.eta;
+          if (by !== "user")
+            toUser(
+              "order_cancelled",
+              by === "admin" ? `${ref(order)} was cancelled by My Mechanic` : `${order.shopname} ${declined ? "declined" : "cancelled"} ${ref(order)}`,
+              [why, "Try another mechanic nearby on the map."].filter(Boolean).join(" ")
+            );
+          if (by !== "mechanic")
+            toMechanic(
+              "order_cancelled",
+              by === "admin" ? `${ref(order)} was cancelled by My Mechanic` : `${order.user.username} cancelled ${ref(order)}`,
+              [why, list(order.services)].filter(Boolean).join(" · ")
+            );
+        }
         break;
       default:
         if (by === "admin") {

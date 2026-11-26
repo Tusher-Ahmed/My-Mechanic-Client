@@ -35,6 +35,12 @@ export async function savePlanSettings(value) {
 export const activeFilter = () => ({ subscriptionEndsAt: mongoose.trusted({ $gt: new Date() }) });
 export const isActive = (mechanic) => !!mechanic?.subscriptionEndsAt && mechanic.subscriptionEndsAt > new Date();
 
+/** Approved by an admin (garages from before approvals existed have no status and count as approved). */
+export const isApproved = (mechanic) => !mechanic?.approvalStatus || mechanic.approvalStatus === "approved";
+/** On the map and bookable: approved AND an active plan. */
+export const isBookable = (mechanic) => isApproved(mechanic) && isActive(mechanic);
+export const bookableFilter = () => ({ ...activeFilter(), approvalStatus: mongoose.trusted({ $nin: ["pending", "rejected"] }) });
+
 /** Price this mechanic pays for a plan: starter price first time, loyalty discount afterwards. */
 export async function quote(mechanicId, planKey) {
   const settings = await getPlanSettings();
@@ -117,11 +123,11 @@ export async function runReminders(now = new Date()) {
     } else if (left > 0 && left <= day && !flags.d1) {
       flags.d1 = now;
       flags.d7 = flags.d7 ?? now;
-      message = { title: "Your plan ends tomorrow", body: `Renew today with ${settings.renewalDiscountPercent}% off to stay on the map.` };
+      message = { title: "Your plan ends tomorrow", body: `You can renew with ${settings.renewalDiscountPercent}% off as soon as it ends.` };
       sent.d1++;
     } else if (left > day && left <= 7 * day && !flags.d7) {
       flags.d7 = now;
-      message = { title: `Your plan ends in ${Math.ceil(left / day)} days`, body: `Renew early with ${settings.renewalDiscountPercent}% off – the new period starts when the current one ends.` };
+      message = { title: `Your plan ends in ${Math.ceil(left / day)} days`, body: `When it ends, renew with ${settings.renewalDiscountPercent}% off to stay on the map.` };
       sent.d7++;
     }
     if (message) {

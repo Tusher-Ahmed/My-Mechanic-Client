@@ -5,6 +5,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { ADMIN_URL, API_URL, TEST_ADMIN } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -14,12 +15,15 @@ const pause = (page: Page, ms = 700) => page.waitForTimeout(ms);
 test("subscription showcase", async ({ page, request, browser }) => {
   test.setTimeout(4 * 60_000);
   const t = Date.now().toString(36);
-  const register = async (shopname: string, email: string) =>
-    (
+  const register = async (shopname: string, email: string) => {
+    const m = await (
       await request.post(`${API_URL}/auth/mechanic/register`, {
-        data: { username: "Shapla Mia", email, phone: "01733445566", nid: "1928374650", password: "secret123", shopname, address: "Mohammadpur", latitude: 23.7651, longitude: 90.3589, services: [{ serviceName: "Engine tune-up", price: 1500 }, { serviceName: "Oil change", price: 750 }] },
+        data: { username: "Shapla Mia", email, phone: "01733445566", nid: "1928374650", password: "secret123", shopname, tradeLicense: `TRAD/SUB/${email.split("@")[0]}`, inspectionFee: 350, address: "Mohammadpur", latitude: 23.7651, longitude: 90.3589, services: [{ serviceName: "Engine tune-up", price: 1500 }, { serviceName: "Oil change", price: 750 }] },
       })
     ).json();
+    await approveQuietly(request, m.account._id, m.token);
+    return m;
+  };
 
   // 1. new garage, no plan yet → hidden from the map, red banner on the dashboard
   const shopname = `Shapla Motors ${t}`;
@@ -59,8 +63,15 @@ test("subscription showcase", async ({ page, request, browser }) => {
   await expect(page.getByTestId("renew-banner")).toHaveCount(0); // live – no banner
   expect(await onMap()).toBe(1);
   await page.getByRole("tab", { name: "Subscription" }).click();
+  // while the plan has plenty of time left the page leads with "Your plan" – no renew buttons
+  await expect(page.getByTestId("plan-status")).toContainText("Your plan");
   await expect(page.getByTestId("plan-status")).toContainText("Monthly plan · active");
-  await expect(page.getByTestId("plan-monthly")).toContainText("20% loyalty discount"); // next renewal is discounted
+  await expect(page.getByTestId("days-left")).toHaveText("30");
+  // while a plan is running there is nothing to buy – renewal opens when it ends
+  await expect(page.getByTestId("plan-monthly")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Renew|Extend|Get started/ })).toHaveCount(0);
+  await expect(page.getByTestId("renew-locked")).toContainText("Renewal opens when your plan ends");
+  await expect(page.getByTestId("renew-locked")).toContainText("20% off");
   await pause(page, 800);
   await shot(page, "05-subscription-active", true);
 

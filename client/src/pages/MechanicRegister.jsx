@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Clock, Crown, LayoutDashboard, MapPin, Store, UserRound, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, Check, Crown, FileCheck2, LayoutDashboard, MapPin, ShieldCheck, Store, UserRound, Wrench } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, errorMessage } from "../lib/api";
 import { money } from "../lib/format";
-import { startCheckout } from "../lib/subscription";
 import LocationPicker from "../components/LocationPicker";
 import ServiceEditor from "../components/ServiceEditor";
 import { Gear } from "../components/mech";
@@ -20,7 +19,7 @@ const STEPS = [
   { key: "shop", label: "Shop", icon: Store },
   { key: "location", label: "Location", icon: MapPin },
   { key: "services", label: "Services", icon: Wrench },
-  { key: "plan", label: "Plan", icon: Crown },
+  { key: "approval", label: "Approval", icon: ShieldCheck },
 ];
 
 function validate(step, f) {
@@ -32,8 +31,10 @@ function validate(step, f) {
     if (f.password.length < 8 || !/[A-Za-z]/.test(f.password) || !/[0-9]/.test(f.password)) return "Password must be at least 8 characters, with a letter and a number.";
   }
   if (step === 1 && f.shopname.trim().length < 3) return "Shop name must be at least 3 characters.";
+  if (step === 1 && !/^[A-Za-z0-9][A-Za-z0-9/\- ]{4,39}$/.test(f.tradeLicense.trim())) return "Enter your trade licence number (letters, digits, / and -).";
   if (step === 1 && f.vehicleTypes.length === 0) return "Select at least one car type you service.";
   if (step === 2 && (f.location.latitude === "" || f.location.longitude === "" || f.location.latitude == null)) return "Please set your shop's location on the map.";
+  if (step === 3 && (String(f.inspectionFee).trim() === "" || !(Number(f.inspectionFee) >= 0))) return "Set your inspection fee – what you charge to find an unknown problem.";
   if (step === 3 && f.services.length === 0) return "Add at least one service with a price.";
   return "";
 }
@@ -53,13 +54,14 @@ export default function MechanicRegister() {
     nid: "",
     password: "",
     shopname: "",
+    tradeLicense: "",
     address: "",
     location: { latitude: "", longitude: "" },
     services: [],
+    inspectionFee: "",
     vehicleTypes: [...VEHICLE_TYPES],
   });
   const set = (e) => setF((x) => ({ ...x, [e.target.name]: e.target.value }));
-  const [plan, setPlan] = useState("monthly"); // monthly | yearly | later
   const [plans, setPlans] = useState(null);
   useEffect(() => {
     api.get("/subscriptions/plans").then(({ data }) => setPlans(data.plans)).catch(() => {});
@@ -94,14 +96,9 @@ export default function MechanicRegister() {
     setBusy(true);
     try {
       const { location, ...rest } = f;
-      await register("mechanic", { ...rest, latitude: location.latitude, longitude: location.longitude });
-      if (plan === "later") {
-        toast("Account created – choose a plan any time to appear on the map.");
-        navigate("/mechanic?tab=subscription");
-      } else {
-        toast.success("Account created – one last step: payment.");
-        await startCheckout(plan, navigate);
-      }
+      await register("mechanic", { ...rest, tradeLicense: f.tradeLicense.trim(), inspectionFee: Number(f.inspectionFee), latitude: location.latitude, longitude: location.longitude });
+      toast.success("Garage submitted – we'll check your trade licence and notify you.");
+      navigate("/mechanic");
     } catch (err) {
       setError(errorMessage(err));
       if (scope.current) animate(scope.current, { x: shake.x }, shake.transition);
@@ -119,7 +116,7 @@ export default function MechanicRegister() {
         <div className="text-center">
           <span className="eyebrow">For garages & mechanics</span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Register your garage</h1>
-          <p className="mt-2 text-slate-600">Five quick steps and drivers nearby can find and book you.</p>
+          <p className="mt-2 text-slate-600">Five quick steps – once approved, drivers nearby can find and book you.</p>
         </div>
 
         {/* progress */}
@@ -170,6 +167,15 @@ export default function MechanicRegister() {
               {step === 1 && (
                 <div className="grid gap-4">
                   <Field label="Shop name" name="shopname" value={f.shopname} onChange={set} placeholder="e.g. Karim Auto Works" />
+                  <Field
+                    label="Trade licence number"
+                    name="tradeLicense"
+                    value={f.tradeLicense}
+                    onChange={set}
+                    placeholder="e.g. TRAD/DNCC/012345/2026"
+                    autoComplete="off"
+                    hint="Required – an admin checks it before your garage goes live. Only admins can see it."
+                  />
                   <Field label="Address / area (optional)" name="address" value={f.address} onChange={set} placeholder="e.g. Road 4, Mirpur 10, Dhaka" />
                   <div>
                     <span className="label">Car types you service</span>
@@ -186,41 +192,47 @@ export default function MechanicRegister() {
               )}
               {step === 3 && (
                 <div>
+                  <div className="mb-6 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200">
+                    <Field
+                      label="Inspection fee (৳) – required"
+                      name="inspectionFee"
+                      type="number"
+                      min="0"
+                      step="10"
+                      inputMode="numeric"
+                      value={f.inspectionFee}
+                      onChange={set}
+                      placeholder="e.g. 300"
+                      hint="For customers who don't know what's wrong: you find the problem for this fee (+ travel), then they can book the fix."
+                      className="max-w-sm"
+                    />
+                  </div>
                   <p className="mb-4 text-sm text-slate-600">What do you offer? You can change services and prices any time later.</p>
                   <ServiceEditor value={f.services} onChange={(services) => setF((x) => ({ ...x, services }))} />
                 </div>
               )}
               {step === 4 && (
-                <div>
-                  <p className="mb-4 text-sm text-slate-600">Choose a plan to appear on the map. Starter prices for your first period – no commission on bookings.</p>
-                  <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Plan">
-                    {["monthly", "yearly"].map((key) => {
-                      const p = plans?.[key];
-                      const on = plan === key;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="radio"
-                          aria-checked={on}
-                          onClick={() => setPlan(key)}
-                          className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${on ? "border-brand-500 bg-brand-50/70 ring-2 ring-brand-500/15" : "border-slate-200 bg-white hover:border-slate-300"}`}
-                        >
-                          {key === "yearly" && <span className="absolute -top-2.5 right-3 rounded-full bg-accent-400 px-2 py-0.5 text-[11px] font-bold text-ink-900">Best value</span>}
-                          <span className="block text-sm font-semibold text-brand-700">{p?.label ?? key}</span>
-                          <span className="mt-1 block font-display text-2xl font-bold text-ink-900">
-                            {p ? money(p.introPrice) : "…"}
-                            <span className="text-sm font-medium text-slate-500"> first {key === "yearly" ? "year" : "month"}</span>
+                <div data-testid="approval-step">
+                  <p className="mb-5 text-sm text-slate-600">To keep fake garages off My Mechanic, every new garage is checked by our team first.</p>
+                  <ol className="space-y-3">
+                    {[
+                      { icon: FileCheck2, title: "We check your trade licence", text: `${f.tradeLicense.trim().toUpperCase() || "Your licence"} · usually within a day` },
+                      { icon: BellRing, title: "You get a notification", text: "Approved – or told what to fix, so you can apply again." },
+                      { icon: Crown, title: "Choose a plan and go live", text: plans ? `From ${money(plans.monthly.introPrice)} for the first month · no commission on bookings` : "Low starter prices · no commission on bookings" },
+                    ].map((s, i) => (
+                      <li key={s.title} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand-600 ring-1 ring-slate-200">
+                          <s.icon className="size-5" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold text-ink-900">
+                            {i + 1}. {s.title}
                           </span>
-                          {p && <span className="block text-xs text-slate-500">then {money(p.price)} / {key === "yearly" ? "year" : "month"} · loyalty discount on renewals</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-                    <input type="radio" name="plan-later" className="accent-brand-600" checked={plan === "later"} onChange={() => setPlan("later")} />
-                    <Clock className="size-4 text-slate-400" /> Decide later (your garage stays hidden until you choose a plan)
-                  </label>
+                          <span className="block text-xs text-slate-500">{s.text}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
             </motion.div>
@@ -242,7 +254,7 @@ export default function MechanicRegister() {
               </Button>
             ) : (
               <Button variant="accent" onClick={submit} loading={busy}>
-                <Check className="size-4" /> {plan === "later" || !plans ? "Create my garage" : `Create garage & pay ${money(plans[plan].introPrice)}`}
+                <Check className="size-4" /> Submit for approval
               </Button>
             )}
           </div>

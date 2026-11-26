@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Calendar, Mail, MapPin, MessageSquareText, Phone, Store, UserRound } from "lucide-react";
+import { Calendar, CalendarPlus, Link2, Mail, MapPin, MessageSquareText, Phone, Search, Stethoscope, Store, UserRound, XCircle } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "./ui";
@@ -62,6 +62,11 @@ export default function OrderCard({ order, viewer, actions, onChange }) {
               <span className="rounded-md bg-ink-900 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wide text-white" data-testid="order-number">
                 {orderNo(order)}
               </span>
+              {order.kind === "inspection" && (
+                <span className="flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800" data-testid="inspection-badge">
+                  <Search className="size-3" /> Inspection
+                </span>
+              )}
               <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${order.serviceMode === "home" ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-600"}`}>
                 {order.serviceMode === "home" ? "Home service" : "At the garage"}
               </span>
@@ -101,13 +106,18 @@ export default function OrderCard({ order, viewer, actions, onChange }) {
               <span className="text-slate-600">
                 Travel charge{order.travelDistanceKm != null && <span className="text-slate-400"> · {km(order.travelDistanceKm)}</span>}
               </span>
-              <span className="font-medium text-ink-800 tabular-nums">{order.travelFee ? money(order.travelFee) : "Free"}</span>
+              <span className="font-medium text-ink-800 tabular-nums">{order.travelWaived ? "Waived" : order.travelFee ? money(order.travelFee) : "Free"}</span>
             </div>
           )}
           <div className="mt-3 flex justify-between gap-6 border-t border-dashed border-slate-200 pt-3">
             <span className="text-sm font-semibold text-ink-900">Total</span>
             <span className="font-display text-lg font-bold text-brand-700 tabular-nums">{money(order.totalPrice)}</span>
           </div>
+          {order.followUpOf && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500" data-testid="follow-up-of">
+              <Link2 className="size-3.5" /> Follow-up to an inspection{order.travelWaived ? " – travel already paid" : ""}
+            </p>
+          )}
           {order.note && (
             <p className="mt-3 flex gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
               <MessageSquareText className="mt-0.5 size-4 shrink-0 text-slate-400" /> {order.note}
@@ -138,6 +148,55 @@ export default function OrderCard({ order, viewer, actions, onChange }) {
           {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
+
+      {order.status === "cancelled" && order.cancellation && (
+        <p className="flex items-start gap-2 border-t border-slate-100 bg-rose-50/50 px-5 py-3 text-sm text-rose-900" data-testid="cancellation">
+          <XCircle className="mt-0.5 size-4 shrink-0 text-rose-500" />
+          <span>
+            <b>
+              {order.cancellation.by === viewer
+                ? "You cancelled"
+                : order.cancellation.by === "admin"
+                  ? "Cancelled by My Mechanic"
+                  : order.cancellation.by === "mechanic"
+                    ? `${order.shopname} ${order.verifiedAt || order.eta ? "cancelled" : "declined"}`
+                    : `${order.user?.username ?? "The customer"} cancelled`}
+            </b>
+            {order.cancellation.reason && <> · {order.cancellation.reason}</>}
+            {viewer === "mechanic" && <span className="block text-xs text-rose-700/80">Not counted in your revenue.</span>}
+          </span>
+        </p>
+      )}
+
+      {order.kind === "inspection" && order.status === "completed" && order.findings && (
+        <div className="border-t border-slate-100 bg-amber-50/40 p-5" data-testid="findings">
+          <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">
+            <Stethoscope className="size-4 text-amber-600" /> {viewer === "user" ? `What ${order.shopname} found` : "Your findings"}
+          </p>
+          <p className="mt-1.5 text-sm text-slate-700">{order.findings.note}</p>
+          {order.findings.recommended?.length > 0 && (
+            <>
+              <ul className="mt-3 space-y-1 text-sm">
+                {order.findings.recommended.map((s) => (
+                  <li key={s.serviceId} className="flex justify-between gap-6">
+                    <span className="text-slate-600">{s.serviceName}</span>
+                    <span className="font-medium text-ink-800 tabular-nums">{money(s.price)}</span>
+                  </li>
+                ))}
+              </ul>
+              {viewer === "user" && (
+                <Link
+                  to={`/store/${order.mechanic?._id ?? order.mechanic}?followUp=${order._id}&services=${order.findings.recommended.map((s) => s.serviceId).join(",")}`}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+                  data-testid="book-recommended"
+                >
+                  <CalendarPlus className="size-4" /> Book recommended services
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <TripPanel order={order} viewer={viewer} onChange={onChange} />
 

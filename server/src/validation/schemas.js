@@ -40,6 +40,12 @@ const loginPassword = z.string({ error: "Password is required" }).min(1, "Passwo
 const name = trimmed(3, 50, "Name");
 const nid = z.string({ error: "NID number is required" }).trim().regex(/^[0-9]{10,17}$/, "NID must be 10 to 17 digits");
 const shopname = trimmed(3, 100, "Shop name");
+const tradeLicense = z
+  .string({ error: "Trade licence number is required" })
+  .trim()
+  .min(5, "Trade licence number looks too short")
+  .max(40, "Trade licence number is too long")
+  .regex(/^[A-Za-z0-9][A-Za-z0-9/\- ]*$/, "Trade licence number can contain letters, digits, / and -");
 const address = z.preprocess(emptyToUndefined, z.string().trim().max(200, "Address is too long").optional());
 const latitude = z.coerce.number({ error: "Latitude must be a number" }).min(-90).max(90);
 const longitude = z.coerce.number({ error: "Longitude must be a number" }).min(-180).max(180);
@@ -81,6 +87,11 @@ export const vehicle = z.object(
 );
 const vehicles = z.array(vehicle).max(5, "You can save up to 5 cars");
 
+const inspectionFee = z.coerce
+  .number({ error: "Inspection fee is required – what you charge to find an unknown problem" })
+  .min(0, "Inspection fee can't be negative")
+  .max(100_000, "Inspection fee is too high");
+
 const travelPricing = z.object({
   base: z.coerce.number().min(0, "Base charge can't be negative").max(100_000),
   perKm: z.coerce.number().min(0, "Per-km charge can't be negative").max(10_000),
@@ -104,6 +115,8 @@ export const login = z.object({ email, password: loginPassword });
 
 export const registerUser = z.object({ username: name, email, phone, password });
 export const registerMechanic = z.object({
+  tradeLicense,
+  inspectionFee,
   username: name,
   email,
   phone,
@@ -125,6 +138,8 @@ const passwordChange = {
 export const updateMe = {
   user: z.object({ username: name.optional(), phone: phone.optional(), vehicles: vehicles.optional(), ...passwordChange }),
   mechanic: z.object({
+    tradeLicense: tradeLicense.optional(),
+    inspectionFee: inspectionFee.optional(),
     username: name.optional(),
     phone: phone.optional(),
     shopname: shopname.optional(),
@@ -134,7 +149,6 @@ export const updateMe = {
     services: services.optional(),
     vehicleTypes: vehicleTypes.optional(),
     travelPricing: travelPricing.optional(),
-  travelPricing: travelPricing.optional(),
     ...passwordChange,
   }),
   admin: z.object({ username: name.optional(), ...passwordChange }),
@@ -158,13 +172,22 @@ export const createOrder = z.object({
   shareLocation: z.boolean().optional(),
   location: geoPoint.optional(),
   mechanicId: objectId("shop"),
-  serviceIds: z.array(objectId("service")).min(1, "Choose at least one service").max(50),
+  serviceIds: z.array(objectId("service")).max(50).default([]),
+  inspection: z.boolean().optional(),
+  followUpOf: objectId("order").optional(),
   vehicle,
   saveVehicle: z.boolean().optional(),
   note: z.preprocess(emptyToUndefined, z.string().trim().max(500, "Note is too long (max 500 characters)").optional()),
 });
+export const findings = z.object({
+  note: z.string().trim().min(3, "Write what you found (at least a few words)").max(1000, "Findings are too long"),
+  serviceIds: z.array(objectId("service")).max(50).default([]),
+});
+
 export const orderStatus = z.object({
+  findings: findings.optional(),
   status: z.enum(ORDER_STATUSES, { error: "Invalid status" }),
+  reason: z.preprocess(emptyToUndefined, z.string().trim().min(3, "Please give a short reason").max(300, "Reason is too long (max 300 characters)").optional()),
   etaMinutes: z.number().int().min(5, "Arrival time must be at least 5 minutes").max(480, "Arrival time can be at most 8 hours").optional(),
 });
 export const etaUpdate = z.object({
@@ -192,6 +215,13 @@ export const planSettings = z.object({
   plans: z.object({ monthly: planPrice, yearly: planPrice }),
   renewalDiscountPercent: z.coerce.number().min(0).max(90),
 });
+export const approval = z
+  .object({
+    status: z.enum(["approved", "rejected"], { error: "Status must be approved or rejected" }),
+    reason: z.string().trim().max(300, "Reason is too long").optional(),
+  })
+  .refine((v) => v.status !== "rejected" || (v.reason?.length ?? 0) >= 3, { message: "Please give a reason for rejecting", path: ["reason"] });
+
 export const grantSubscription = z.object({
   plan: z.enum(["monthly", "yearly"]).optional(),
   endsAt: z.union([z.iso.datetime({ offset: true }), z.null()]),
@@ -208,6 +238,8 @@ export const adminUserUpdate = z.object({
 });
 export const adminMechanicCreate = registerMechanic;
 export const adminMechanicUpdate = z.object({
+  tradeLicense: tradeLicense.optional(),
+  inspectionFee: inspectionFee.optional(),
   username: name.optional(),
   email: email.optional(),
   phone: phone.optional(),

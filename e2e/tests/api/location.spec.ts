@@ -131,7 +131,7 @@ test("API-LOC-06 completing or cancelling deletes the location and ends sharing"
   expect((await move(request, a.user, a.order, DHAKA)).status()).toBe(400);
 
   const b = await sharedOrder(request);
-  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled" }, ...auth(b.user.session.token) });
+  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(b.user.session.token) });
   expect((await move(request, b.user, b.order, DHAKA)).status()).toBe(400);
 });
 

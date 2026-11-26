@@ -28,12 +28,12 @@ test("API-NOTIF-02 accept and complete notify the customer", async ({ request })
 
 test("API-NOTIF-03 cancel/decline notify the other party only", async ({ request }) => {
   const a = await createOrderFixture(request);
-  await request.patch(`orders/${a.order._id}/status`, { data: { status: "cancelled" }, ...auth(a.user.session.token) });
+  await request.patch(`orders/${a.order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(a.user.session.token) });
   expect((await list(request, a.mech.session.token)).items.map((n) => n.type)).toEqual(["order_cancelled", "order_new"]);
   expect((await list(request, a.user.session.token)).items).toEqual([]);
 
   const b = await createOrderFixture(request);
-  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled" }, ...auth(b.mech.session.token) });
+  await request.patch(`orders/${b.order._id}/status`, { data: { status: "cancelled", reason: "Test cancellation" }, ...auth(b.mech.session.token) });
   const userNotes = (await list(request, b.user.session.token)).items;
   expect(userNotes).toHaveLength(1);
   expect(userNotes[0].title).toContain("declined");
@@ -105,4 +105,26 @@ test("API-NOTIF-07 live stream delivers a notification instantly", async ({ requ
   } finally {
     controller.abort();
   }
+});
+
+test("API-NOTIF-08 deleting a notification removes it for good – only your own", async ({ request }) => {
+  const { mech, user, order } = await createOrderFixture(request);
+  await request.patch(`orders/${order._id}/status`, { data: { status: "accepted" }, ...auth(mech.session.token) });
+  const before = await list(request, user.session.token);
+  expect(before.unread).toBe(1);
+  const id = before.items[0]._id;
+
+  // someone else can't delete it
+  expect((await request.delete(`notifications/${id}`, auth(mech.session.token))).status()).toBe(404);
+  expect((await request.delete(`notifications/${id}`)).status()).toBe(401);
+  expect((await request.delete("notifications/not-an-id", auth(user.session.token))).status()).toBe(400);
+
+  const res = await request.delete(`notifications/${id}`, auth(user.session.token));
+  expect(res.status()).toBe(200);
+  expect(await res.json()).toEqual({ deleted: true, unread: 0 });
+  const after = await list(request, user.session.token);
+  expect(after.items.find((n) => n._id === id)).toBeUndefined();
+  expect(after.unread).toBe(0);
+  // gone from the database – deleting again finds nothing
+  expect((await request.delete(`notifications/${id}`, auth(user.session.token))).status()).toBe(404);
 });

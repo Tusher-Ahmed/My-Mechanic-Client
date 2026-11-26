@@ -34,6 +34,8 @@ export async function registerMechanic(request: APIRequestContext, overrides: Re
     nid: "1234567890",
     password: "secret123",
     shopname: `Auto Works ${id}`,
+    tradeLicense: `TRAD/E2E/${id}`,
+    inspectionFee: 300,
     latitude: 23.78,
     longitude: 90.28,
     services: [
@@ -44,11 +46,25 @@ export async function registerMechanic(request: APIRequestContext, overrides: Re
   };
   // by default the garage gets an active plan (silent admin grant – no payment, no notification) so it's on
   // the map and bookable; subscription tests pass subscribe: false and use buyPlan() instead
-  const { subscribe = true, ...data } = body as typeof body & { subscribe?: boolean };
+  // garages that register themselves wait for an admin; by default the helper approves them quietly
+  // (approval notification removed) – approval tests pass approve: false
+  const { subscribe = true, approve = true, ...data } = body as typeof body & { subscribe?: boolean; approve?: boolean };
   const res = await request.post("auth/mechanic/register", { data });
   const session = (await res.json()) as Session;
+  if (approve && res.ok()) {
+    await approveGarage(request, session.account._id);
+    const { items } = await (await request.get("notifications", auth(session.token))).json();
+    for (const n of items) await request.delete(`notifications/${n._id}`, auth(session.token));
+    session.account.approvalStatus = "approved";
+  }
   if (subscribe && res.ok()) await grantPlan(request, session.account._id, 30);
   return { res, body: data, session };
+}
+
+/** Admin approves (or rejects, with a reason) a self-registered garage. */
+export async function approveGarage(request: APIRequestContext, mechanicId: string, status: "approved" | "rejected" = "approved", reason?: string) {
+  adminToken ??= await loginAdmin(request);
+  return request.put(`admin/mechanics/${mechanicId}/approval`, { data: { status, reason }, ...auth(adminToken) });
 }
 
 let adminToken: string | null = null;

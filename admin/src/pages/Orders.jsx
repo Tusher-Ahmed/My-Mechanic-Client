@@ -79,7 +79,10 @@ export default function Orders() {
       sortValue: (o) => new Date(o.createdAt).getTime(),
       render: (o) => (
         <div>
-          <p className="font-mono text-xs font-semibold text-ink-900">{orderNo(o)}</p>
+          <p className="font-mono text-xs font-semibold text-ink-900">
+            {orderNo(o)}
+            {o.kind === "inspection" && <span className="ml-1.5 rounded bg-amber-100 px-1 py-0.5 font-sans text-[10px] font-semibold text-amber-800">Inspection</span>}
+          </p>
           <p className="text-xs whitespace-nowrap text-slate-500">{date(o.createdAt)}</p>
         </div>
       ),
@@ -182,7 +185,7 @@ export default function Orders() {
                 {open.serviceMode === "home" && (
                   <div className="flex justify-between gap-4 px-4 py-2.5 text-sm">
                     <span>Travel charge{open.travelDistanceKm != null && <span className="text-slate-400"> · {open.travelDistanceKm} km</span>}</span>
-                    <span className="font-medium tabular-nums">{open.travelFee ? money(open.travelFee) : "Free"}</span>
+                    <span className="font-medium tabular-nums">{open.travelWaived ? "Waived (follow-up)" : open.travelFee ? money(open.travelFee) : "Free"}</span>
                   </div>
                 )}
                 <div className="flex justify-between bg-slate-50 px-4 py-3 font-semibold">
@@ -191,6 +194,26 @@ export default function Orders() {
                 </div>
               </div>
             </div>
+
+            {open.kind === "inspection" && open.findings && (
+              <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-100" data-testid="admin-findings">
+                <p className="font-semibold">Inspection findings</p>
+                <p className="mt-1">{open.findings.note}</p>
+                {open.findings.recommended?.length > 0 && (
+                  <p className="mt-1 text-xs text-amber-800">Recommended: {open.findings.recommended.map((s) => `${s.serviceName} (${money(s.price)})`).join(", ")}</p>
+                )}
+              </div>
+            )}
+
+            {open.status === "cancelled" && open.cancellation && (
+              <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-rose-100" data-testid="admin-cancellation">
+                <p className="font-semibold">
+                  Cancelled by {open.cancellation.by === "user" ? "the customer" : open.cancellation.by === "mechanic" ? "the mechanic" : "an admin"} · {date(open.cancellation.at)}
+                </p>
+                {open.cancellation.reason && <p className="mt-1">{open.cancellation.reason}</p>}
+                <p className="mt-1 text-xs text-rose-700/80">Not counted in any revenue.</p>
+              </div>
+            )}
 
             {open.note && (
               <div>

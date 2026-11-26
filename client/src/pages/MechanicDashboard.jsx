@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { Banknote, BarChart3, CheckCircle2, ClipboardList, Clock, Crown, Flag, Hourglass, Settings, Store, Wrench, XCircle } from "lucide-react";
+import { Banknote, BarChart3, CheckCircle2, ClipboardList, Clock, Crown, Flag, Hourglass, Search, Settings, Store, Wrench, XCircle } from "lucide-react";
 import SubscriptionPanel, { RenewBanner } from "../components/SubscriptionPanel";
 import MechanicRevenue from "../components/MechanicRevenue";
 import { useSubscription } from "../lib/subscription";
@@ -15,6 +15,9 @@ import ServiceEditor from "../components/ServiceEditor";
 import LocationPicker from "../components/LocationPicker";
 import { CarTypeChooser } from "../components/VehiclePicker";
 import { EtaPickerModal } from "../components/TripPanel";
+import CancelOrderDialog from "../components/CancelOrderDialog";
+import FindingsDialog from "../components/FindingsDialog";
+import ApprovalBanner, { isApproved } from "../components/ApprovalBanner";
 import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
 
 const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
@@ -43,8 +46,10 @@ function ShopForm() {
   const { account, updateProfile } = useAuth();
   const [form, setForm] = useState({
     shopname: account.shopname,
+    tradeLicense: account.tradeLicense ?? "",
     address: account.address ?? "",
     services: account.services ?? [],
+    inspectionFee: account.inspectionFee ?? 300,
     vehicleTypes: account.vehicleTypes ?? [],
     travelPricing: { ...DEFAULT_TRAVEL_PRICING, ...(account.travelPricing || {}) },
     location: { latitude: account.latitude, longitude: account.longitude },
@@ -57,8 +62,10 @@ function ShopForm() {
     try {
       await updateProfile({
         shopname: form.shopname,
+        ...(form.tradeLicense.trim() && form.tradeLicense.trim().toUpperCase() !== (account.tradeLicense ?? "") ? { tradeLicense: form.tradeLicense.trim() } : {}),
         address: form.address,
         services: form.services.map(({ _id, serviceName, price }) => ({ _id, serviceName, price })),
+        inspectionFee: Number(form.inspectionFee) || 0,
         vehicleTypes: form.vehicleTypes,
         travelPricing: numericPricing(form.travelPricing),
         latitude: form.location.latitude,
@@ -79,6 +86,17 @@ function ShopForm() {
           <Store className="size-5 text-brand-600" /> Shop details
         </h3>
         <Field label="Shop name" value={form.shopname} onChange={(e) => setForm({ ...form, shopname: e.target.value })} required />
+        <Field
+          label="Trade licence number"
+          value={form.tradeLicense}
+          onChange={(e) => setForm({ ...form, tradeLicense: e.target.value })}
+          placeholder="e.g. TRAD/DNCC/012345/2026"
+          hint={
+            form.tradeLicense.trim().toUpperCase() !== (account.tradeLicense ?? "") && form.tradeLicense.trim()
+              ? "Changing it sends your garage for approval again – it's hidden from the map until checked."
+              : "Only admins can see this."
+          }
+        />
         <Field label="Address / area" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="e.g. Road 4, Mirpur 10" />
       </div>
       <div className="card p-6 sm:p-8">
@@ -87,6 +105,17 @@ function ShopForm() {
         </h3>
         <div className="mt-5">
           <ServiceEditor value={form.services} onChange={(services) => setForm({ ...form, services })} />
+        </div>
+      </div>
+      <div className="card p-6 sm:p-8">
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <Search className="size-5 text-amber-600" /> Inspection fee
+        </h3>
+        <p className="mt-1 mb-5 text-sm text-slate-500">
+          For customers who don't know what's wrong: you find the problem, they pay this (+ travel) and can then book the fix.
+        </p>
+        <div className="max-w-56">
+          <Field label="Inspection fee (৳)" type="number" min="0" step="10" required value={form.inspectionFee} onChange={(e) => setForm({ ...form, inspectionFee: e.target.value })} />
         </div>
       </div>
       <div className="card p-6 sm:p-8">
@@ -155,12 +184,29 @@ export default function MechanicDashboard() {
   };
 
   const count = (s) => orders?.filter((o) => o.status === s).length ?? 0;
-  const earned = orders?.filter((o) => o.status === "completed").reduce((sum, o) => sum + o.totalPrice, 0) ?? 0;
+  // services only – travel charges are reported separately in the Revenue tab; cancelled jobs never count
+  const earned = orders?.filter((o) => o.status === "completed").reduce((sum, o) => sum + (o.servicesTotal ?? o.totalPrice - (o.travelFee ?? 0)), 0) ?? 0;
   const shown = orders?.filter((o) => filter === "all" || o.status === filter) ?? [];
 
   const act = async (order, status, msg) => {
-    if (status === "cancelled" && !window.confirm(order.status === "pending" ? "Decline this order?" : "Cancel this accepted order?")) return;
+    if (status === "cancelled") return setCancelling(order); // ask for a reason first
+    if (status === "completed" && order.kind === "inspection") return setFinishing(order); // findings first
     if (await setStatus(order, status)) toast.success(msg);
+  };
+  const [cancelling, setCancelling] = useState(null);
+  const [finishing, setFinishing] = useState(null);
+  const confirmFindings = async (findings) => {
+    if (await setStatus(finishing, "completed", { findings })) {
+      toast.success("Inspection finished – the customer can now book the fix");
+      setFinishing(null);
+    }
+  };
+  const confirmCancel = async (reason) => {
+    const declining = cancelling.status === "pending";
+    if (await setStatus(cancelling, "cancelled", { reason })) {
+      toast.success(declining ? "Order declined – the customer has been told why" : "Order cancelled – the customer has been told why");
+      setCancelling(null);
+    }
   };
 
   const actionsFor = (o) => {
@@ -188,7 +234,7 @@ export default function MechanicDashboard() {
             title={o.verifiedAt ? undefined : "Verify the customer's code first"}
             onClick={() => act(o, "completed", "Marked as completed")}
           >
-            <Flag className="size-4" /> Mark completed
+            <Flag className="size-4" /> {o.kind === "inspection" ? "Finish inspection" : "Mark completed"}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => act(o, "cancelled", "Order cancelled")}>
             Cancel
@@ -211,14 +257,14 @@ export default function MechanicDashboard() {
       </motion.header>
 
       <div className="mt-8">
-        <RenewBanner sub={sub} onOpen={() => setTab("subscription")} />
+        {isApproved(account) ? <RenewBanner sub={sub} onOpen={() => setTab("subscription")} /> : <ApprovalBanner onFix={() => setTab("shop")} />}
       </div>
 
       <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" initial="hidden" animate="show" variants={stagger(0.06)}>
         <Stat icon={Hourglass} label="New requests" value={count("pending")} tone="bg-amber-50 text-amber-600" />
         <Stat icon={Clock} label="In progress" value={count("accepted")} tone="bg-sky-50 text-sky-600" />
         <Stat icon={CheckCircle2} label="Completed" value={count("completed")} tone="bg-emerald-50 text-emerald-600" />
-        <Stat icon={Banknote} label="Earned" value={earned} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
+        <Stat icon={Banknote} label="Service revenue" value={earned} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
       </motion.div>
 
       <Tabs
@@ -260,7 +306,14 @@ export default function MechanicDashboard() {
               </>
             ))}
           {tab === "revenue" && (orders ? <MechanicRevenue orders={orders} /> : <div className="grid h-48 place-items-center"><GearLoader label="Loading" /></div>)}
-          {tab === "subscription" && <SubscriptionPanel sub={sub} />}
+          {tab === "subscription" &&
+            (isApproved(account) ? (
+              <SubscriptionPanel sub={sub} />
+            ) : (
+              <p className="rounded-2xl bg-amber-50 p-6 text-center text-sm text-amber-900 ring-1 ring-amber-200" data-testid="plans-locked">
+                Plans open as soon as an admin approves your garage. You'll get a notification.
+              </p>
+            ))}
           {tab === "shop" && <ShopForm />}
           {tab === "profile" && (
             <div className="space-y-6">
@@ -271,6 +324,13 @@ export default function MechanicDashboard() {
         </motion.div>
       </AnimatePresence>
 
+      <CancelOrderDialog
+        order={cancelling}
+        kind={cancelling?.status === "pending" ? "decline" : "cancel"}
+        onClose={() => setCancelling(null)}
+        onConfirm={confirmCancel}
+      />
+      <FindingsDialog order={finishing} onClose={() => setFinishing(null)} onConfirm={confirmFindings} />
       <EtaPickerModal
         open={!!accepting}
         onClose={() => setAccepting(null)}

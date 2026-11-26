@@ -30,7 +30,8 @@ router.post(
   (req, res, next) => validate({ body: req.valid.params.role === "user" ? S.registerUser : S.registerMechanic })(req, res, next),
   async (req, res) => {
     const { role } = req.valid.params;
-    const account = await ACCOUNT_MODELS[role].create(req.valid.body);
+    // a garage that registers itself waits for an admin to check its trade licence
+    const account = await ACCOUNT_MODELS[role].create(role === "mechanic" ? { ...req.valid.body, approvalStatus: "pending" } : req.valid.body);
     res.status(201).json(session(account, role));
   }
 );
@@ -62,7 +63,13 @@ router.put(
     const account = await ACCOUNT_MODELS[role].findById(id).select("+password");
     if (!account) throw unauthorized("This account no longer exists");
 
+    // a new trade licence has to be checked again (also how a rejected garage re-applies)
+    const licenceChanged = role === "mechanic" && changes.tradeLicense && changes.tradeLicense.toUpperCase() !== account.tradeLicense;
     account.set(changes);
+    if (licenceChanged) {
+      account.approvalStatus = "pending";
+      account.approval = undefined;
+    }
 
     if (newPassword) {
       const ok = await account.comparePassword(String(currentPassword ?? ""));

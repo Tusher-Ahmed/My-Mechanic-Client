@@ -11,9 +11,9 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export const API_PORT = 8090;
 export const API_URL = `http://localhost:${API_PORT}/api`;
-export const CLIENT_PORT = 5175;
+export const CLIENT_PORT = 5185; // away from dev servers (5173, 5174 and the ports Vite drifts to)
 export const CLIENT_URL = `http://localhost:${CLIENT_PORT}`;
-export const ADMIN_PORT = 5176;
+export const ADMIN_PORT = 5186;
 export const ADMIN_URL = `http://localhost:${ADMIN_PORT}`;
 export const TEST_ADMIN = { email: "admin@e2e.test", password: "AdminPass123" };
 

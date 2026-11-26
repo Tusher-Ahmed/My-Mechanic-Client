@@ -16,7 +16,8 @@ export const errorHandler = (err, _req, res, _next) => {
   }
   if (err?.code === 11000) {
     const field = Object.keys(err.keyValue || {})[0] || "value";
-    return res.status(409).json({ message: `This ${field} is already registered` });
+    const label = { tradeLicense: "trade licence number", shopname: "shop name", email: "email" }[field] ?? field;
+    return res.status(409).json({ message: `This ${label} is already registered` });
   }
   if (err?.type === "entity.parse.failed") {
     return res.status(400).json({ message: "Invalid JSON body" });

@@ -58,6 +58,14 @@ router.patch("/:id/read", validate({ params: idParams }), async (req, res) => {
   res.json(n);
 });
 
+// DELETE /api/notifications/:id  – removes it permanently (only your own)
+router.delete("/:id", validate({ params: idParams }), async (req, res) => {
+  const n = await Notification.findOneAndDelete({ _id: req.valid.params.id, ...mine(req) });
+  if (!n) throw notFound("Notification not found");
+  const unread = await Notification.countDocuments({ ...mine(req), read: false });
+  res.json({ deleted: true, unread });
+});
+
 // POST /api/notifications/read-all
 router.post("/read-all", async (req, res) => {
   const { modifiedCount } = await Notification.updateMany({ ...mine(req), read: false }, { read: true });

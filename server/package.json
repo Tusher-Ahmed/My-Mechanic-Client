@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch --env-file-if-exists=.env src/index.js",
-    "seed:admin": "node --env-file-if-exists=.env src/scripts/seedAdmin.js"
+    "seed:admin": "node --env-file-if-exists=.env src/scripts/seedAdmin.js",
+    "seed:demo": "node --env-file-if-exists=.env src/scripts/seedDemo.js"
   },
   "engines": {
     "node": ">=20.6"

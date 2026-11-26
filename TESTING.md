@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 106 tests
+## 1. API tests (`e2e/tests/api`) – 127 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -115,6 +115,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-05 | Notifications are private (401 / 404 for others) | ✅ |
 | API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
+| API-NOTIF-08 | Deleting a notification (✕ in the bell) removes it from the database – only your own | ✅ |
 
 ### Car model & type – `vehicles.spec.ts`
 | ID | Case | Status |
@@ -249,6 +250,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-05 | Notifications are private (401 / 404 for others) | ✅ |
 | API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
+| API-NOTIF-08 | Deleting a notification (✕ in the bell) removes it from the database – only your own | ✅ |
 
 ### Car model & type – `vehicles.spec.ts`
 | ID | Case | Status |
@@ -310,13 +312,45 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 |---|---|---|
 | API-SUB-01 | Garage without a plan: hidden from the map, bookings refused, store page says not accepting | ✅ |
 | API-SUB-02 | First plan at the starter price (৳99 / ৳1,499), activates the garage, notifies the mechanic | ✅ |
-| API-SUB-03 | Returning customers get the loyalty discount (20 %); renewing early stacks the days | ✅ |
+| API-SUB-03 | No renewing while a plan is running (checkout refused); afterwards the loyalty price (20 %) applies | ✅ |
+| API-SUB-03b | A checkout opened before activation (e.g. second tab) can’t be paid once a plan is running | ✅ |
 | API-SUB-04 | Cancelled payments don't activate; no re-use; can't pay someone else's checkout | ✅ |
 | API-SUB-05 | Expired plan hides the garage; renewal at the discount brings it back from today | ✅ |
 | API-SUB-06 | Reminders at 7 days, 1 day and on expiry – each sent once | ✅ |
 | API-SUB-07 | Only mechanics can buy; invalid plans rejected; plan list public | ✅ |
 | API-SUB-08 | Admin revenue report: totals, this month, new vs renewals, per plan, garages, recent payments | ✅ |
 | API-SUB-09 | Admin edits plan prices / discount; mechanics see new prices; invalid values rejected | ✅ |
+
+### Cancelling – `cancellation.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-CXL-01 | Cancelling / declining without a reason (or a too-short one) is refused | ✅ |
+| API-CXL-02 | Customer cancels: reason stored, shown to both sides, mechanic notified with it | ✅ |
+| API-CXL-03 | Mechanic declines (pending) or cancels after verifying – customer told which and why | ✅ |
+| API-CXL-04 | Cancelled orders never count as money earned (top garages, revenue) | ✅ |
+| API-CXL-05 | Admin can cancel; a default reason is recorded | ✅ |
+
+### Inspection visits – `inspection.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-INS-01 | Opening a shop requires an inspection fee; each garage sets and edits its own | ✅ |
+| API-INS-02 | An inspection charges only the garage's fee plus travel | ✅ |
+| API-INS-03 | An order is an inspection or services – never empty, never both; the browser can't set the fee | ✅ |
+| API-INS-04 | Completing an inspection needs findings; recommended services must be from the garage's list; customer notified | ✅ |
+| API-INS-05 | Follow-up order after a home inspection: travel waived within 24 h, linked to the inspection | ✅ |
+| API-INS-06 | Follow-up only to your own completed inspection at the same garage | ✅ |
+| API-INS-07 | Inspection fee counts as service revenue, travel stays separate | ✅ |
+
+### Garage approval – `approval.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-APR-01 | Trade licence required, validated, unique (friendly 409) and never shown publicly | ✅ |
+| API-APR-02 | Self-registered garage waits: hidden from the map (even with a plan), not bookable, can't buy a plan | ✅ |
+| API-APR-03 | Admin approves → mechanic notified, garage can buy a plan, appears on the map, bookable | ✅ |
+| API-APR-04 | Rejecting needs a reason (sent to the mechanic); a new trade licence puts the garage back to pending | ✅ |
+| API-APR-05 | Changing the licence of an approved garage hides it until checked again (same licence: no change) | ✅ |
+| API-APR-06 | Garage created by an admin is approved at once (licence still required) | ✅ |
+| API-APR-07 | Only admins can approve/reject; a mechanic can't approve themselves via the profile | ✅ |
 
 ---
 
@@ -341,6 +375,22 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 plans (৳99 / ৳1,499 starter) → demo checkout (Nagad, "no real money") → paid → banner gone, on the map, next renewal
 shows 20 % off → an expired garage: customers see "not taking bookings" with booking disabled, the mechanic sees
 "Your plan expired … 20 % off" + a reminder → admin Revenue page. Screenshots: `sub-*.png`. ✅
+
+**Approval walk-through** (`approval.showcase.ts`): mechanic registers through the wizard with a trade licence
+(required), sees "Waiting for approval" and locked plans; the admin dashboard shows the pending garage, the admin
+rejects it with a reason; the mechanic is told live, fixes the licence in My shop (back to pending); the admin
+approves – the mechanic's page updates live and plans open; a garage the admin adds is approved at once.
+Screenshots: `approval-*.png`. ✅
+
+**Inspection walk-through** (`inspection.showcase.ts`): customer picks "Not sure what's wrong? Book an inspection"
+(fee + travel only, services and inspection are mutually exclusive), mechanic finishes it with findings and recommended
+services, customer sees the findings and books them in one tap – recommended services preselected, travel waived.
+Screenshots: `inspection-*.png`. ✅
+
+**Cancel walk-through** (`cancel.showcase.ts`): styled dialog instead of the browser confirm box (asserts no native
+dialog ever opens), reason required, mechanic cancels a verified job and declines a new one, customer sees who cancelled
+and why, the cancelled job adds ৳0 to the mechanic's revenue, customer cancels with "Other" + own reason.
+Screenshots: `cancel-*.png`. ✅
 
 **Layout stress** (`layout-stress.showcase.ts`, desktop + phone): the API is faked with extreme garages –
 12 car types (incl. unknown future types), very long shop / owner / address / service names, 15 services.

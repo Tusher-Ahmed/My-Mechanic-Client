@@ -12,7 +12,7 @@ import { orderEvents, publish } from "../services/notifications.js";
 import * as S from "../validation/schemas.js";
 import { approximate, distanceKm } from "../utils/geo.js";
 import { suggestedEtaMinutes, travelFeeFor } from "../utils/pricing.js";
-import { isActive } from "../services/subscriptions.js";
+import { isBookable } from "../services/subscriptions.js";
 
 const router = Router();
 
@@ -64,23 +64,39 @@ export const populateParties = (query) =>
 // POST /api/orders
 //   { mechanicId, serviceIds: [], vehicle, serviceMode?: "home" | "garage", location?, saveVehicle?, note? }
 router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (req, res) => {
-  const { mechanicId, serviceIds, vehicle, saveVehicle, note, location } = req.valid.body;
+  const { mechanicId, serviceIds, vehicle, saveVehicle, note, location, inspection, followUpOf } = req.valid.body;
+  if (inspection && serviceIds.length) throw badRequest("Book either an inspection or services, not both");
+  if (!inspection && serviceIds.length === 0) throw badRequest("Choose at least one service, or book an inspection if you're not sure what's wrong");
+  if (inspection && followUpOf) throw badRequest("A follow-up order is for the services found during the inspection");
   // home service = the mechanic comes to the customer (needs the location). Older clients only sent shareLocation.
   const serviceMode = req.valid.body.serviceMode ?? (req.valid.body.shareLocation ? "home" : "garage");
 
   const mechanic = await Mechanic.findById(mechanicId);
   if (!mechanic) throw notFound("Shop not found");
-  if (!isActive(mechanic)) throw badRequest(`${mechanic.shopname} isn't taking bookings right now. Try another garage on the map.`);
+  if (!isBookable(mechanic)) throw badRequest(`${mechanic.shopname} isn't taking bookings right now. Try another garage on the map.`);
   if (!mechanic.vehicleTypes.includes(vehicle.type)) {
     throw badRequest(`${mechanic.shopname} doesn't service ${vehicle.type} cars. Try another garage.`);
   }
 
   // prices are taken from the database, never trusted from the browser
-  const services = [...new Set(serviceIds)].map((id) => {
-    const s = mechanic.services.id(id);
-    if (!s) throw badRequest("One of the selected services no longer exists");
-    return { serviceId: s._id, serviceName: s.serviceName, price: s.price };
-  });
+  const services = inspection
+    ? [{ serviceName: "Inspection – find the problem", price: mechanic.inspectionFee ?? 300 }]
+    : [...new Set(serviceIds)].map((id) => {
+        const s = mechanic.services.id(id);
+        if (!s) throw badRequest("One of the selected services no longer exists");
+        return { serviceId: s._id, serviceName: s.serviceName, price: s.price };
+      });
+
+  // follow-up to an inspection: same customer + garage, inspection completed; travel waived within 24 h
+  let parent = null;
+  if (followUpOf) {
+    parent = await Order.findById(followUpOf);
+    if (!parent || parent.user.toString() !== req.auth.id || parent.mechanic.toString() !== mechanic._id.toString()) {
+      throw badRequest("That inspection isn't yours or belongs to another garage");
+    }
+    if (parent.kind !== "inspection" || parent.status !== "completed") throw badRequest("Only a completed inspection can have a follow-up order");
+  }
+  const travelWaived = !!parent && parent.serviceMode === "home" && Date.now() - parent.updatedAt.getTime() <= 24 * 3_600_000;
   const servicesTotal = services.reduce((sum, s) => sum + s.price, 0);
 
   // travel charge (home service only), computed from the real distance
@@ -94,11 +110,14 @@ router.post("/", requireAuth("user"), validate({ body: S.createOrder }), async (
       throw badRequest(`${mechanic.shopname} only travels up to ${pricing.maxDistanceKm} km – you're ${d.toFixed(1)} km away. Choose a closer garage or bring the car in.`);
     }
     travelDistanceKm = Math.round(d * 100) / 100;
-    travelFee = travelFeeFor(pricing, d);
+    travelFee = travelWaived ? 0 : travelFeeFor(pricing, d);
   }
 
   const order = await Order.create({
     number: await nextSeq("order"),
+    kind: inspection ? "inspection" : "service",
+    followUpOf: parent?._id,
+    travelWaived,
     user: req.auth.id,
     mechanic: mechanic._id,
     shopname: mechanic.shopname,
@@ -186,8 +205,23 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: 
   const next = req.valid.body.status;
   const allowed = TRANSITIONS[role][order.status] || [];
   if (!allowed.includes(next)) throw badRequest(`Can't change a ${order.status} order to ${next}`);
+  if (next === "cancelled" && !req.valid.body.reason) {
+    throw badRequest(role === "mechanic" && order.status === "pending" ? "Please choose a reason for declining." : "Please choose a reason for cancelling.");
+  }
   if (next === "completed" && !order.verifiedAt) {
     throw badRequest("Verify the customer's 4-digit code first – ask them for it when you arrive.");
+  }
+  if (next === "completed" && order.kind === "inspection") {
+    // the mechanic must say what they found; recommended services come from their own price list
+    const f = req.valid.body.findings;
+    if (!f) throw badRequest("Write what you found during the inspection before completing it.");
+    const mechanic = await Mechanic.findById(order.mechanic);
+    const recommended = [...new Set(f.serviceIds)].map((sid) => {
+      const s = mechanic.services.id(sid);
+      if (!s) throw badRequest("One of the recommended services isn't in your price list");
+      return { serviceId: s._id, serviceName: s.serviceName, price: s.price };
+    });
+    order.findings = { note: f.note, recommended };
   }
 
   order.status = next;
@@ -199,6 +233,7 @@ router.patch("/:id/status", requireAuth("user", "mechanic"), validate({ params: 
     order.customerLocation = undefined; // stop + delete location
     order.verificationCode = undefined;
   }
+  if (next === "cancelled") order.cancellation = { by: role, reason: req.valid.body.reason, at: new Date() };
   await order.save();
   const populated = await populateParties(Order.findById(order._id));
   await orderEvents.statusChanged(populated, role);

@@ -114,17 +114,16 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={location.pathname}
-          className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0, transition: { duration: dur.slow, ease } }}
-          exit={{ opacity: 0, transition: { duration: 0.12, ease: easeExit } }}
-        >
-          <Outlet />
-        </motion.main>
-      </AnimatePresence>
+      {/* entrance only: waiting for the old page's exit froze the new page at opacity 0
+          when the navigation was started from a link inside the old page */}
+      <motion.main
+        key={location.pathname}
+        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0, transition: { duration: dur.slow, ease } }}
+      >
+        <Outlet />
+      </motion.main>
     </div>
   );
 }
