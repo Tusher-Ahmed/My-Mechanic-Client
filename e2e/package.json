@@ -1,0 +1,15 @@
+{
+  "name": "e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --project=api && playwright test --project=showcase --workers=1",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "showcase": "playwright test --project=showcase --headed --workers=1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}

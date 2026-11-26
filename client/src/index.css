@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Plus Jakarta Sans", "Noto Sans Bengali", ui-sans-serif, sans-serif;
+
+  /* navy from the original brand (#041531) */
+  --color-ink-950: #050c1f;
+  --color-ink-900: #0a1530;
+  --color-ink-800: #13214a;
+  --color-ink-700: #1f2f61;
+
+  /* teal from the original brand (rgb(4,118,116)) */
+  --color-brand-50: #effcfa;
+  --color-brand-100: #c8f5ee;
+  --color-brand-200: #94e9dd;
+  --color-brand-300: #59d5c6;
+  --color-brand-400: #2bbaac;
+  --color-brand-500: #129d92;
+  --color-brand-600: #0a7e77;
+  --color-brand-700: #0c6460;
+  --color-brand-800: #0f504e;
+  --color-brand-900: #114341;
+
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+
+  /* motion identity – "Corporate" personality (see lib/motion.js) */
+  --ease-brand: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
+  --animate-spin-slow: mm-spin 14s linear infinite;
+  --animate-spin-slower: mm-spin 22s linear infinite;
+  --animate-spin-reverse: mm-spin-reverse 14s linear infinite;
+  --animate-marquee: mm-marquee 36s linear infinite;
+  --animate-ping-slow: mm-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* keyframes defined globally so inline styles and theme utilities can both use them */
+@keyframes mm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mm-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes mm-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes mm-ping {
+  75%,
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-slate-50 font-sans text-slate-700 antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-ink-900;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  ::selection {
+    @apply bg-brand-200 text-ink-900;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/5;
+  }
+  .glass {
+    @apply border border-white/60 bg-white/70 backdrop-blur-xl;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink-900 shadow-xs transition-colors duration-150 ease-brand placeholder:text-slate-400 hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-800;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold tracking-wide text-brand-700 uppercase;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgb(15 23 42 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(15 23 42 / 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-grid-dark {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+/* map popup restyle */
+.maplibregl-popup-content {
+  @apply rounded-2xl! p-0! shadow-xl! shadow-slate-900/15!;
+}
+.maplibregl-popup-close-button {
+  @apply top-2! right-2! size-7! rounded-full! text-lg! text-slate-500! hover:bg-slate-100!;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
