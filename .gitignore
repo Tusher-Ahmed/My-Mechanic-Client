@@ -27,3 +27,7 @@ playwright-report/
 blob-report/
 playwright/.cache/
 showcase-output/
+
+# local task / test tracking (not part of the repo)
+TASKS.md
+TESTING.md

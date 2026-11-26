@@ -99,7 +99,7 @@ npm run dev                           # API, website and admin together
 
 ## Testing
 
-All tests use Playwright against a separate test database. Details in **[TESTING.md](TESTING.md)**.
+All tests use Playwright against a separate test database that is wiped on every run.
 
 - **127 API tests**, including 15 security tests that perform real attacks (NoSQL injection, forged tokens,
   price manipulation, mass assignment, brute force).
