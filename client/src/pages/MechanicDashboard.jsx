@@ -17,6 +17,7 @@ import { CarTypeChooser } from "../components/VehiclePicker";
 import { EtaPickerModal } from "../components/TripPanel";
 import CancelOrderDialog from "../components/CancelOrderDialog";
 import FindingsDialog from "../components/FindingsDialog";
+import ApprovalBanner, { isApproved } from "../components/ApprovalBanner";
 import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
 
 const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
@@ -45,6 +46,7 @@ function ShopForm() {
   const { account, updateProfile } = useAuth();
   const [form, setForm] = useState({
     shopname: account.shopname,
+    tradeLicense: account.tradeLicense ?? "",
     address: account.address ?? "",
     services: account.services ?? [],
     inspectionFee: account.inspectionFee ?? 300,
@@ -60,6 +62,7 @@ function ShopForm() {
     try {
       await updateProfile({
         shopname: form.shopname,
+        ...(form.tradeLicense.trim() && form.tradeLicense.trim().toUpperCase() !== (account.tradeLicense ?? "") ? { tradeLicense: form.tradeLicense.trim() } : {}),
         address: form.address,
         services: form.services.map(({ _id, serviceName, price }) => ({ _id, serviceName, price })),
         inspectionFee: Number(form.inspectionFee) || 0,
@@ -83,6 +86,17 @@ function ShopForm() {
           <Store className="size-5 text-brand-600" /> Shop details
         </h3>
         <Field label="Shop name" value={form.shopname} onChange={(e) => setForm({ ...form, shopname: e.target.value })} required />
+        <Field
+          label="Trade licence number"
+          value={form.tradeLicense}
+          onChange={(e) => setForm({ ...form, tradeLicense: e.target.value })}
+          placeholder="e.g. TRAD/DNCC/012345/2026"
+          hint={
+            form.tradeLicense.trim().toUpperCase() !== (account.tradeLicense ?? "") && form.tradeLicense.trim()
+              ? "Changing it sends your garage for approval again – it's hidden from the map until checked."
+              : "Only admins can see this."
+          }
+        />
         <Field label="Address / area" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="e.g. Road 4, Mirpur 10" />
       </div>
       <div className="card p-6 sm:p-8">
@@ -243,7 +257,7 @@ export default function MechanicDashboard() {
       </motion.header>
 
       <div className="mt-8">
-        <RenewBanner sub={sub} onOpen={() => setTab("subscription")} />
+        {isApproved(account) ? <RenewBanner sub={sub} onOpen={() => setTab("subscription")} /> : <ApprovalBanner onFix={() => setTab("shop")} />}
       </div>
 
       <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" initial="hidden" animate="show" variants={stagger(0.06)}>
@@ -292,7 +306,14 @@ export default function MechanicDashboard() {
               </>
             ))}
           {tab === "revenue" && (orders ? <MechanicRevenue orders={orders} /> : <div className="grid h-48 place-items-center"><GearLoader label="Loading" /></div>)}
-          {tab === "subscription" && <SubscriptionPanel sub={sub} />}
+          {tab === "subscription" &&
+            (isApproved(account) ? (
+              <SubscriptionPanel sub={sub} />
+            ) : (
+              <p className="rounded-2xl bg-amber-50 p-6 text-center text-sm text-amber-900 ring-1 ring-amber-200" data-testid="plans-locked">
+                Plans open as soon as an admin approves your garage. You'll get a notification.
+              </p>
+            ))}
           {tab === "shop" && <ShopForm />}
           {tab === "profile" && (
             <div className="space-y-6">

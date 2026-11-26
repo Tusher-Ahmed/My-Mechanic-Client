@@ -50,7 +50,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (120 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (127 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
@@ -79,6 +79,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] D.1 Car type picker: searchable dropdown (single + multi select, keyboard, portal) instead of chip rows
 - [x] D.2 Live customer location shared with the mechanic after acceptance (consent, auto-stop, live map, Navigate) – 8 API tests + showcase
 - [x] D.4 Booking → arrival flow: "mechanic comes to me" vs "I bring the car", distance-based travel charge (per-garage pricing + service radius), arrival time on accept (suggested from distance, "running late" updates), order numbers MM-1001…, 4-digit customer code verified by the mechanic on arrival (5 tries, 15-min lock) before completing – 12 API tests + showcase
+- [x] D.8 Trade licence required to open a garage; self-registered garages wait for admin approval (hidden, not bookable, no plans) – approve or reject with a reason, mechanic notified live; a new licence is checked again; admin-created garages are approved at once; existing garages count as approved. Also fixed: admin pages froze invisible when navigating from a link inside a page
 - [x] D.7 Delete a notification for good with the ✕ in the bell (own notifications only)
 - [x] D.6 Inspection visits: "not sure what's wrong" → only the garage's inspection fee + travel; mechanic writes findings + recommended services; customer books the fix as a follow-up (travel waived within 24 h); inspection fee mandatory when opening a shop, editable in My shop and admin
 - [x] D.5 Cancel / decline with a required reason in a styled dialog (no browser confirm), shown to both sides and in notifications; cancelled jobs never count as revenue; service revenue and travel charges reported separately (mechanic + admin)

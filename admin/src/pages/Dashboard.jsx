@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowRight, Banknote, ClipboardList, Mail, RefreshCw, Truck, Users, Wrench } from "lucide-react";
+import { ArrowRight, Banknote, ClipboardList, Hourglass, Mail, RefreshCw, Truck, Users, Wrench } from "lucide-react";
 import { api } from "../lib/api";
 import { date, money } from "../lib/format";
 import { useAuth } from "../context/AuthContext";
@@ -88,6 +88,26 @@ export default function Dashboard() {
       />
 
       <motion.div initial="hidden" animate="show" variants={stagger(0.06)} className="space-y-6">
+        {stats?.pendingGarages > 0 && (
+          <motion.div variants={fadeUp}>
+            <Link
+              to="/mechanics?pending=1"
+              data-testid="pending-garages"
+              className="flex items-center justify-between gap-4 rounded-2xl bg-amber-50 p-4 text-amber-950 ring-1 ring-amber-200 transition-colors hover:bg-amber-100"
+            >
+              <span className="flex items-center gap-3 text-sm">
+                <Hourglass className="size-5 text-amber-600" />
+                <span>
+                  <b>
+                    {stats.pendingGarages} garage{stats.pendingGarages === 1 ? "" : "s"} waiting for approval
+                  </b>{" "}
+                  – check the trade licence and approve or reject.
+                </span>
+              </span>
+              <ArrowRight className="size-4 shrink-0" />
+            </Link>
+          </motion.div>
+        )}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
           <Tile icon={Banknote} label="Service revenue" value={stats?.serviceRevenue} format={(n) => money(n)} tone="bg-brand-50 text-brand-600" />
           <Tile icon={Truck} label="Travel charges" value={stats?.travelRevenue} format={(n) => money(n)} tone="bg-sky-50 text-sky-600" />

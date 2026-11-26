@@ -5,6 +5,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { API_URL, TEST_ADMIN } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -23,9 +24,10 @@ test("inspection → findings → book the fix", async ({ page, browser, request
   const shopname = `Inspect Auto ${t}`;
   const mech = await call("POST", "auth/mechanic/register", {
     username: "Sohel Rana", email: `ins-m-${t}@showcase.test`, phone: "01812345678", nid: "1234512345", password: "secret123",
-    shopname, inspectionFee: 450, address: "Tejgaon", latitude: 23.78, longitude: 90.4,
+    shopname, tradeLicense: `TRAD/INS/${t}`, inspectionFee: 450, address: "Tejgaon", latitude: 23.78, longitude: 90.4,
     services: [{ serviceName: "Brake pad replacement", price: 1800 }, { serviceName: "Oil change", price: 800 }, { serviceName: "AC gas refill", price: 2500 }],
   });
+  await approveQuietly(request, mech.account._id, mech.token);
   const admin = await call("POST", "auth/admin/login", TEST_ADMIN);
   await call("PUT", `admin/mechanics/${mech.account._id}/subscription`, { endsAt: new Date(Date.now() + 30 * 86_400_000).toISOString() }, admin.token);
   const user = await call("POST", "auth/user/register", { username: "Farhana Akter", email: `ins-u-${t}@showcase.test`, phone: "01798765432", password: "secret123" });

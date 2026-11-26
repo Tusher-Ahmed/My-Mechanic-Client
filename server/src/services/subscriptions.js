@@ -35,6 +35,12 @@ export async function savePlanSettings(value) {
 export const activeFilter = () => ({ subscriptionEndsAt: mongoose.trusted({ $gt: new Date() }) });
 export const isActive = (mechanic) => !!mechanic?.subscriptionEndsAt && mechanic.subscriptionEndsAt > new Date();
 
+/** Approved by an admin (garages from before approvals existed have no status and count as approved). */
+export const isApproved = (mechanic) => !mechanic?.approvalStatus || mechanic.approvalStatus === "approved";
+/** On the map and bookable: approved AND an active plan. */
+export const isBookable = (mechanic) => isApproved(mechanic) && isActive(mechanic);
+export const bookableFilter = () => ({ ...activeFilter(), approvalStatus: mongoose.trusted({ $nin: ["pending", "rejected"] }) });
+
 /** Price this mechanic pays for a plan: starter price first time, loyalty discount afterwards. */
 export async function quote(mechanicId, planKey) {
   const settings = await getPlanSettings();

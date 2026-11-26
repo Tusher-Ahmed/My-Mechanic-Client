@@ -7,7 +7,7 @@ import { Mechanic } from "../models/Mechanic.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
-import { activate, createPending, getPlanSettings, isActive, markFailed, quotes } from "../services/subscriptions.js";
+import { activate, createPending, getPlanSettings, isActive, isApproved, markFailed, quotes } from "../services/subscriptions.js";
 import * as S from "../validation/schemas.js";
 
 const router = Router();
@@ -42,6 +42,14 @@ const stillActive = (mechanic) =>
   badRequest(`Your plan is still active until ${mechanic.subscriptionEndsAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}. You can renew once it ends.`);
 
 router.post("/checkout", requireAuth("mechanic"), validate({ body: S.checkout }), async (req, res) => {
+  // plans are sold only to garages an admin has approved
+  if (!isApproved(req.account)) {
+    throw badRequest(
+      req.account.approvalStatus === "rejected"
+        ? "Your garage wasn't approved. Update your trade licence in My shop to apply again."
+        : "Your garage is waiting for approval. You can choose a plan as soon as it's approved."
+    );
+  }
   // one plan at a time: renewing only opens when the current plan has ended
   if (isActive(req.account)) throw stillActive(req.account);
   const sub = await createPending(req.auth.id, req.valid.body.plan, "demo");

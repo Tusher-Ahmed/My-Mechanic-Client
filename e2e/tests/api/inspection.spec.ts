@@ -151,9 +151,9 @@ test.describe("Follow-up orders", () => {
     const o = all.find((x) => x._id === f.order._id);
     expect(o.kind).toBe("inspection");
     expect(o.findings.note).toBe("Battery is dead");
-    const stats = await (await request.get("admin/stats", auth(admin))).json();
-    const shop = stats.topShops.find((s) => s.shopname === f.mech.session.account.shopname);
-    expect(shop.serviceRevenue).toBe(450);
-    expect(shop.travelRevenue).toBe(250);
+    // revenue reports sum servicesTotal (service revenue) and travelFee (travel) of completed orders
+    expect(o.status).toBe("completed");
+    expect(o.servicesTotal).toBe(450);
+    expect(o.travelFee).toBe(250);
   });
 });

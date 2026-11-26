@@ -4,6 +4,7 @@
  */
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { ADMIN_URL, API_URL, TEST_ADMIN } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -28,6 +29,7 @@ async function seed(request: APIRequestContext) {
       await post("auth/mechanic/register", {
         shopname: `${shopname}`,
         inspectionFee: 300 + i * 50,
+        tradeLicense: `TRAD/DNCC/20${i}/${tag}`,
         username,
         email: `adm-garage${i}-${tag}@showcase.test`,
         phone: `0191100000${i}`,
@@ -44,6 +46,7 @@ async function seed(request: APIRequestContext) {
         ],
       })
     );
+    await approveQuietly(request, mechs[i].account._id, mechs[i].token);
     // each garage buys a plan through the demo checkout (yearly for the first, renewals for the second)
     const token = mechs[i].token;
     const plans = i === 0 ? ["yearly"] : i === 1 ? ["monthly", "monthly"] : ["monthly"];
@@ -61,9 +64,9 @@ async function seed(request: APIRequestContext) {
       await post(`subscriptions/demo/${checkout.tranId}/pay`, { outcome: "success" }, token);
     }
   }
-  // a garage that never paid (shows up under "Hidden from the map")
+  // a garage that just registered: waits for approval (and has no plan yet)
   await post("auth/mechanic/register", {
-    shopname: "Sleepy Garage", inspectionFee: 250, username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
+    shopname: "Sleepy Garage", inspectionFee: 250, tradeLicense: `TRAD/DSCC/77/${tag}`, username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
     latitude: 23.75, longitude: 90.39, services: [{ serviceName: "Car wash", price: 300 }],
   });
   const people = ["Nusrat Jahan", "Arif Rahman", "Sadia Islam", "Tanvir Ahmed"];

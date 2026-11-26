@@ -70,6 +70,8 @@ for (const g of garages) {
   const data = {
     ...g,
     nid: "1234567890",
+    tradeLicense: `TRAD/DNCC/DEMO-${garages.indexOf(g) + 1}/2026`,
+    approvalStatus: "approved",
     services: g.services.map(([serviceName, price]) => ({ serviceName, price })),
     subscriptionPlan: "monthly",
     subscriptionEndsAt: in30days(),

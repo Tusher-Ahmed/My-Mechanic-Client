@@ -5,6 +5,7 @@
  */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import path from "node:path";
+import { approveQuietly } from "../../helpers/showcase";
 import { API_URL } from "../../playwright.config";
 
 const OUT = path.resolve(import.meta.dirname, "../../showcase-output");
@@ -24,6 +25,7 @@ async function seed(request) {
     const res = await request.post(`${API_URL}/auth/mechanic/register`, {
       data: {
         inspectionFee: 300,
+        tradeLicense: `TRAD/DNCC/10${i}/2026`,
         ...g,
         email: `garage${i + 1}@showcase.test`,
         phone: `0182233440${i}`,
@@ -34,6 +36,7 @@ async function seed(request) {
     });
     const m = await res.json();
     mechanics.push(m);
+    await approveQuietly(request, m.account._id, m.token); // an admin checked the trade licence
     // garages need an active plan to be on the map – buy one through the demo checkout
     const h = { headers: { Authorization: `Bearer ${m.token}` } };
     const checkout = await (await request.post(`${API_URL}/subscriptions/checkout`, { data: { plan: "monthly" }, ...h })).json();

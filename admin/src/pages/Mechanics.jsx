@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Hourglass, MapPin, Plus, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import { api, CLIENT_URL, errorMessage } from "../lib/api";
 import { useList } from "../lib/useList";
 import { date } from "../lib/format";
@@ -18,6 +19,7 @@ const blank = {
   nid: "",
   password: "",
   shopname: "",
+  tradeLicense: "",
   address: "",
   latitude: 23.7808875,
   longitude: 90.2792371,
@@ -33,7 +35,13 @@ export default function Mechanics() {
   const { rows: orders } = useList("/admin/orders");
   const [editing, setEditing] = useState(null); // form object; has _id when editing
   const [busy, setBusy] = useState(false);
+  const [params] = useSearchParams();
+  const [pendingOnly, setPendingOnly] = useState(() => params.get("pending") === "1");
+  const [rejectReason, setRejectReason] = useState("");
   const confirm = useConfirm();
+  const pendingCount = rows?.filter((m) => m.approvalStatus === "pending").length ?? 0;
+  // memoised: the table resets its paging when it gets a new rows array, so a fresh array each render would loop
+  const shownRows = useMemo(() => (pendingOnly ? rows?.filter((m) => m.approvalStatus === "pending") : rows), [rows, pendingOnly]);
 
   const orderCount = useMemo(() => {
     const m = {};
@@ -52,6 +60,7 @@ export default function Mechanics() {
       latitude: Number(rest.latitude),
       longitude: Number(rest.longitude),
       services: rest.services.map(({ _id: sid, serviceName, price }) => ({ _id: sid, serviceName, price })),
+      tradeLicense: rest.tradeLicense?.trim() || undefined,
       inspectionFee: rest.inspectionFee === "" || rest.inspectionFee == null ? undefined : Number(rest.inspectionFee),
       travelPricing: numericPricing({ ...DEFAULT_TRAVEL_PRICING, ...(rest.travelPricing || {}) }),
       ...(password ? { password } : {}),
@@ -96,6 +105,12 @@ export default function Mechanics() {
       ),
     },
     {
+      key: "approvalStatus",
+      header: "Status",
+      sortValue: (m) => ({ pending: 0, rejected: 1 })[m.approvalStatus] ?? 2,
+      render: (m) => <ApprovalChip status={m.approvalStatus} />,
+    },
+    {
       key: "username",
       header: "Owner",
       render: (m) => (
@@ -136,6 +151,18 @@ export default function Mechanics() {
       toast.error(errorMessage(err));
     }
   };
+  const decide = async (status) => {
+    if (status === "rejected" && rejectReason.trim().length < 3) return toast.error("Write why the garage isn't approved – the mechanic sees it.");
+    try {
+      const { data } = await api.put(`/admin/mechanics/${editing._id}/approval`, { status, ...(status === "rejected" ? { reason: rejectReason.trim() } : {}) });
+      upsert(data);
+      setEditing((f) => ({ ...f, approvalStatus: data.approvalStatus, approval: data.approval }));
+      setRejectReason("");
+      toast.success(status === "approved" ? "Garage approved – the mechanic has been notified" : "Garage rejected – the mechanic has been told why");
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
   const extend30 = () => {
     const base = active ? new Date(editing.subscriptionEndsAt) : new Date();
     setPlanEnd(new Date(base.getTime() + 30 * 86_400_000).toISOString());
@@ -146,17 +173,26 @@ export default function Mechanics() {
         title="Mechanics"
         subtitle="Garages on the map. Click a row to edit."
         actions={
+          <>
+          <Button variant={pendingOnly ? "primary" : "secondary"} onClick={() => setPendingOnly((v) => !v)} aria-pressed={pendingOnly} data-testid="pending-filter">
+            <Hourglass className="size-4" /> Pending approval
+            {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-ink-900">{pendingCount}</span>}
+          </Button>
           <Button onClick={() => setEditing({ ...blank })}>
             <Plus className="size-4" /> Add mechanic
           </Button>
+          </>
         }
       />
       <DataTable
         columns={columns}
-        rows={rows}
-        search={(m) => [m.shopname, m.username, m.email, m.phone, m.address, m.nid, ...(m.services ?? []).map((s) => s.serviceName)].join(" ")}
-        onRowClick={(m) => setEditing({ ...m, password: "", address: m.address ?? "" })}
-        emptyText="No mechanics registered yet."
+        rows={shownRows}
+        search={(m) => [m.shopname, m.username, m.email, m.phone, m.address, m.nid, m.tradeLicense, ...(m.services ?? []).map((s) => s.serviceName)].join(" ")}
+        onRowClick={(m) => {
+          setRejectReason("");
+          setEditing({ ...m, password: "", address: m.address ?? "", tradeLicense: m.tradeLicense ?? "" });
+        }}
+        emptyText={pendingOnly ? "No garages waiting for approval." : "No mechanics registered yet."}
         initialSort={{ key: "createdAt", dir: "desc" }}
       />
 
@@ -186,6 +222,28 @@ export default function Mechanics() {
       >
         {editing && (
           <form id="mechanic-form" onSubmit={save} className="space-y-8">
+            {!isNew && editing.approvalStatus && editing.approvalStatus !== "approved" && (
+              <section className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200" data-testid="admin-approval">
+                <p className="flex items-center gap-2 text-sm font-bold text-amber-950">
+                  <ShieldCheck className="size-4" /> {editing.approvalStatus === "rejected" ? "Rejected" : "Waiting for approval"}
+                </p>
+                <p className="mt-1 text-sm text-amber-900">
+                  Trade licence: <b className="font-mono">{editing.tradeLicense || "—"}</b> · NID {editing.nid}. Check them before approving.
+                </p>
+                {editing.approvalStatus === "rejected" && editing.approval?.reason && <p className="mt-1 text-xs text-amber-800">Last reason: {editing.approval.reason}</p>}
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <Field label="Reason (needed to reject)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} maxLength={300} placeholder="e.g. Licence number doesn't match the shop" className="flex-1" />
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="danger" onClick={() => decide("rejected")}>
+                      <XCircle className="size-4" /> Reject
+                    </Button>
+                    <Button type="button" size="sm" variant="success" onClick={() => decide("approved")}>
+                      <CheckCircle2 className="size-4" /> Approve
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
             {!isNew && (
               <section className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 ring-1 ${active ? "bg-emerald-50 ring-emerald-100" : "bg-rose-50 ring-rose-100"}`} data-testid="admin-plan">
                 <p className="text-sm">
@@ -229,6 +287,7 @@ export default function Mechanics() {
             <section className="grid gap-4 sm:grid-cols-2">
               <h3 className="text-sm font-bold sm:col-span-2">Shop</h3>
               <Field label="Shop name" value={editing.shopname} onChange={set("shopname")} required />
+              <Field label="Trade licence number" value={editing.tradeLicense} onChange={set("tradeLicense")} required={isNew} placeholder="e.g. TRAD/DNCC/012345/2026" hint={isNew ? "Garages you add are approved at once" : undefined} />
               <Field label="Address / area" value={editing.address} onChange={set("address")} />
               <Field label="Latitude" type="number" step="any" value={editing.latitude} onChange={set("latitude")} required />
               <Field label="Longitude" type="number" step="any" value={editing.longitude} onChange={set("longitude")} required />
@@ -284,4 +343,10 @@ export default function Mechanics() {
       </Drawer>
     </>
   );
+}
+
+function ApprovalChip({ status }) {
+  if (status === "pending") return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-amber-800">pending</span>;
+  if (status === "rejected") return <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-rose-700">rejected</span>;
+  return <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-emerald-700">approved</span>;
 }

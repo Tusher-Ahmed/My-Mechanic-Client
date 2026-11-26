@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 120 tests
+## 1. API tests (`e2e/tests/api`) – 127 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -341,6 +341,17 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-INS-06 | Follow-up only to your own completed inspection at the same garage | ✅ |
 | API-INS-07 | Inspection fee counts as service revenue, travel stays separate | ✅ |
 
+### Garage approval – `approval.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-APR-01 | Trade licence required, validated, unique (friendly 409) and never shown publicly | ✅ |
+| API-APR-02 | Self-registered garage waits: hidden from the map (even with a plan), not bookable, can't buy a plan | ✅ |
+| API-APR-03 | Admin approves → mechanic notified, garage can buy a plan, appears on the map, bookable | ✅ |
+| API-APR-04 | Rejecting needs a reason (sent to the mechanic); a new trade licence puts the garage back to pending | ✅ |
+| API-APR-05 | Changing the licence of an approved garage hides it until checked again (same licence: no change) | ✅ |
+| API-APR-06 | Garage created by an admin is approved at once (licence still required) | ✅ |
+| API-APR-07 | Only admins can approve/reject; a mechanic can't approve themselves via the profile | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -364,6 +375,12 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 plans (৳99 / ৳1,499 starter) → demo checkout (Nagad, "no real money") → paid → banner gone, on the map, next renewal
 shows 20 % off → an expired garage: customers see "not taking bookings" with booking disabled, the mechanic sees
 "Your plan expired … 20 % off" + a reminder → admin Revenue page. Screenshots: `sub-*.png`. ✅
+
+**Approval walk-through** (`approval.showcase.ts`): mechanic registers through the wizard with a trade licence
+(required), sees "Waiting for approval" and locked plans; the admin dashboard shows the pending garage, the admin
+rejects it with a reason; the mechanic is told live, fixes the licence in My shop (back to pending); the admin
+approves – the mechanic's page updates live and plans open; a garage the admin adds is approved at once.
+Screenshots: `approval-*.png`. ✅
 
 **Inspection walk-through** (`inspection.showcase.ts`): customer picks "Not sure what's wrong? Book an inspection"
 (fee + travel only, services and inspection are mutually exclusive), mechanic finishes it with findings and recommended

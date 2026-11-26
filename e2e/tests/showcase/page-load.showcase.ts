@@ -12,7 +12,7 @@ const mainVisible = (page: Page) =>
 test("lazy pages are visible after a full page load", async ({ page, request }) => {
   const t = Date.now().toString(36);
   const res = await request.post(`${API_URL}/auth/mechanic/register`, {
-    data: { username: "Reload Mech", email: `reload-${t}@showcase.test`, phone: "01811111111", nid: "1234567890", password: "secret123", shopname: `Reload Garage ${t}`, inspectionFee: 300, latitude: 23.8, longitude: 90.4, services: [{ serviceName: "Oil change", price: 800 }] },
+    data: { username: "Reload Mech", email: `reload-${t}@showcase.test`, phone: "01811111111", nid: "1234567890", password: "secret123", shopname: `Reload Garage ${t}`, tradeLicense: `TRAD/RELOAD/${t}`, inspectionFee: 300, latitude: 23.8, longitude: 90.4, services: [{ serviceName: "Oil change", price: 800 }] },
   });
   const { token } = await res.json();
 

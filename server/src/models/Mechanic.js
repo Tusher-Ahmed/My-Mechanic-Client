@@ -25,6 +25,15 @@ const MechanicSchema = new Schema({
     maxlength: [100, "Shop name must be at most 100 characters"],
   },
   address: { type: String, trim: true, maxlength: 200 },
+  // trade licence: checked by an admin before the garage goes live (never shown publicly)
+  tradeLicense: { type: String, trim: true, uppercase: true, maxlength: 40, unique: true, sparse: true },
+  // self-registered garages wait for an admin; garages created by an admin are approved at once.
+  // Garages from before approvals existed have no value and count as approved.
+  approvalStatus: { type: String, enum: ["pending", "approved", "rejected"], index: true },
+  approval: {
+    type: new Schema({ at: Date, by: { type: Schema.Types.ObjectId, ref: "Admin" }, reason: { type: String, trim: true, maxlength: 300 } }, { _id: false }),
+    default: undefined,
+  },
   latitude: { type: Number, required: [true, "Shop location is required"], min: -90, max: 90 },
   longitude: { type: Number, required: [true, "Shop location is required"], min: -180, max: 180 },
   services: { type: [ServiceSchema], default: [] },

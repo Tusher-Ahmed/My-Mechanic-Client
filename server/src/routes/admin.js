@@ -11,7 +11,7 @@ import { validate } from "../middleware/validate.js";
 import { badRequest, notFound } from "../utils/httpError.js";
 import * as S from "../validation/schemas.js";
 import { populateParties, shapeOrder } from "./orders.js";
-import { orderEvents } from "../services/notifications.js";
+import { notify, orderEvents } from "../services/notifications.js";
 import { Subscription } from "../models/Subscription.js";
 import { getPlanSettings, runReminders, savePlanSettings } from "../services/subscriptions.js";
 
@@ -19,7 +19,7 @@ const router = Router();
 router.use(requireAuth("admin"));
 
 /** Build list / create / update / delete routes for an account model (bodies validated by Zod). */
-function accountRoutes(path, Model, { create, update }, { onDelete } = {}) {
+function accountRoutes(path, Model, { create, update }, { onDelete, onCreate = (b) => b } = {}) {
   router.get(`/${path}`, async (_req, res) => {
     res.json(await Model.find().sort({ createdAt: -1 }).limit(1000));
   });
@@ -31,7 +31,7 @@ function accountRoutes(path, Model, { create, update }, { onDelete } = {}) {
   });
 
   router.post(`/${path}`, validate({ body: create }), async (req, res) => {
-    const doc = await Model.create(req.valid.body);
+    const doc = await Model.create(onCreate(req.valid.body, req));
     res.status(201).json(doc);
   });
 
@@ -57,6 +57,8 @@ accountRoutes("users", User, { create: S.adminUserCreate, update: S.adminUserUpd
   onDelete: (doc) => Promise.all([Order.deleteMany({ user: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
 });
 accountRoutes("mechanics", Mechanic, { create: S.adminMechanicCreate, update: S.adminMechanicUpdate }, {
+  // created by an admin = already checked, so approved at once
+  onCreate: (body, req) => ({ ...body, approvalStatus: "approved", approval: { at: new Date(), by: req.auth.id } }),
   onDelete: (doc) => Promise.all([Order.deleteMany({ mechanic: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
 });
 
@@ -122,7 +124,7 @@ router.get("/stats", async (_req, res) => {
   const services = { $ifNull: ["$servicesTotal", { $subtract: ["$totalPrice", travel] }] };
   const sumIfEarned = (expr) => ({ $sum: { $cond: [earned, expr, 0] } });
 
-  const [users, mechanics, messages, byStatus, totals, monthly, topShops] = await Promise.all([
+  const [users, mechanics, messages, byStatus, totals, monthly, topShops, pendingGarages] = await Promise.all([
     User.countDocuments(),
     Mechanic.countDocuments(),
     Message.countDocuments(),
@@ -145,6 +147,7 @@ router.get("/stats", async (_req, res) => {
       { $sort: { orders: -1 } },
       { $limit: 5 },
     ]),
+    Mechanic.countDocuments({ approvalStatus: "pending" }),
   ]);
 
   // fill the last 6 months so the chart has no gaps
@@ -167,6 +170,7 @@ router.get("/stats", async (_req, res) => {
   res.json({
     users,
     mechanics,
+    pendingGarages,
     messages,
     orders: Object.values(ordersByStatus).reduce((a, b) => a + b, 0),
     serviceRevenue: totals[0]?.serviceRevenue ?? 0,
@@ -180,6 +184,28 @@ router.get("/stats", async (_req, res) => {
 // ---------- subscriptions (platform revenue) ----------
 router.get("/plans", async (_req, res) => res.json(await getPlanSettings()));
 router.put("/plans", validate({ body: S.planSettings }), async (req, res) => res.json(await savePlanSettings(req.valid.body)));
+
+// approve or reject a garage that registered itself; the mechanic is notified either way
+router.put("/mechanics/:id/approval", validate({ params: S.idParams, body: S.approval }), async (req, res) => {
+  const m = await Mechanic.findById(req.valid.params.id);
+  if (!m) throw notFound();
+  const { status, reason } = req.valid.body;
+  m.approvalStatus = status;
+  m.approval = { at: new Date(), by: req.auth.id, reason: status === "rejected" ? reason : undefined };
+  await m.save();
+  await notify({
+    recipient: m._id,
+    role: "mechanic",
+    type: status === "approved" ? "order_completed" : "order_cancelled",
+    title: status === "approved" ? "Your garage is approved 🎉" : "Your garage wasn't approved",
+    body:
+      status === "approved"
+        ? "Choose a plan and your garage appears on the map for drivers nearby."
+        : `Reason: ${reason}. Update your trade licence in My shop to apply again.`,
+    link: status === "approved" ? "/mechanic?tab=subscription" : "/mechanic?tab=shop",
+  });
+  res.json(m);
+});
 
 // grant / extend / end a garage's plan by hand (e.g. a free trial or a support case) – no payment recorded
 router.put("/mechanics/:id/subscription", validate({ params: S.idParams, body: S.grantSubscription }), async (req, res) => {

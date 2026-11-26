@@ -40,6 +40,12 @@ const loginPassword = z.string({ error: "Password is required" }).min(1, "Passwo
 const name = trimmed(3, 50, "Name");
 const nid = z.string({ error: "NID number is required" }).trim().regex(/^[0-9]{10,17}$/, "NID must be 10 to 17 digits");
 const shopname = trimmed(3, 100, "Shop name");
+const tradeLicense = z
+  .string({ error: "Trade licence number is required" })
+  .trim()
+  .min(5, "Trade licence number looks too short")
+  .max(40, "Trade licence number is too long")
+  .regex(/^[A-Za-z0-9][A-Za-z0-9/\- ]*$/, "Trade licence number can contain letters, digits, / and -");
 const address = z.preprocess(emptyToUndefined, z.string().trim().max(200, "Address is too long").optional());
 const latitude = z.coerce.number({ error: "Latitude must be a number" }).min(-90).max(90);
 const longitude = z.coerce.number({ error: "Longitude must be a number" }).min(-180).max(180);
@@ -109,6 +115,7 @@ export const login = z.object({ email, password: loginPassword });
 
 export const registerUser = z.object({ username: name, email, phone, password });
 export const registerMechanic = z.object({
+  tradeLicense,
   inspectionFee,
   username: name,
   email,
@@ -131,6 +138,7 @@ const passwordChange = {
 export const updateMe = {
   user: z.object({ username: name.optional(), phone: phone.optional(), vehicles: vehicles.optional(), ...passwordChange }),
   mechanic: z.object({
+    tradeLicense: tradeLicense.optional(),
     inspectionFee: inspectionFee.optional(),
     username: name.optional(),
     phone: phone.optional(),
@@ -207,6 +215,13 @@ export const planSettings = z.object({
   plans: z.object({ monthly: planPrice, yearly: planPrice }),
   renewalDiscountPercent: z.coerce.number().min(0).max(90),
 });
+export const approval = z
+  .object({
+    status: z.enum(["approved", "rejected"], { error: "Status must be approved or rejected" }),
+    reason: z.string().trim().max(300, "Reason is too long").optional(),
+  })
+  .refine((v) => v.status !== "rejected" || (v.reason?.length ?? 0) >= 3, { message: "Please give a reason for rejecting", path: ["reason"] });
+
 export const grantSubscription = z.object({
   plan: z.enum(["monthly", "yearly"]).optional(),
   endsAt: z.union([z.iso.datetime({ offset: true }), z.null()]),
@@ -223,6 +238,7 @@ export const adminUserUpdate = z.object({
 });
 export const adminMechanicCreate = registerMechanic;
 export const adminMechanicUpdate = z.object({
+  tradeLicense: tradeLicense.optional(),
   inspectionFee: inspectionFee.optional(),
   username: name.optional(),
   email: email.optional(),
