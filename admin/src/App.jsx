@@ -9,6 +9,7 @@ import Mechanics from "./pages/Mechanics";
 import Users from "./pages/Users";
 import Messages from "./pages/Messages";
 import Admins from "./pages/Admins";
+import Revenue from "./pages/Revenue";
 
 export default function App() {
   const { admin, loading } = useAuth();
@@ -20,6 +21,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="revenue" element={<Revenue />} />
         <Route path="mechanics" element={<Mechanics />} />
         <Route path="users" element={<Users />} />
         <Route path="messages" element={<Messages />} />

@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 const MapPage = lazy(() => import("./pages/MapPage"));
 const MechanicRegister = lazy(() => import("./pages/MechanicRegister"));
 const MechanicDashboard = lazy(() => import("./pages/MechanicDashboard"));
+const DemoCheckout = lazy(() => import("./pages/DemoCheckout"));
 
 function RequireRole({ role, children }) {
   const auth = useAuth();
@@ -59,6 +60,14 @@ export default function App() {
             element={
               <RequireRole role="mechanic">
                 <MechanicDashboard />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="checkout/:tranId"
+            element={
+              <RequireRole role="mechanic">
+                <DemoCheckout />
               </RequireRole>
             }
           />

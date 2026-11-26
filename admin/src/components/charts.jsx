@@ -2,7 +2,7 @@
 // Single-series only (one brand hue) – identity always comes from text labels, never colour,
 // so they stay colourblind-safe. Specs: thin marks, 4px rounded data-ends on the baseline,
 // recessive grid, hover/focus tooltip, screen-reader table.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ease } from "../lib/motion";
 
@@ -17,19 +17,30 @@ const niceMax = (v) => {
 /** Vertical bars for a short time series, e.g. 6 months. data: [{ label, value }] */
 export function ColumnChart({ data, format = (n) => n.toLocaleString("en-US"), title, height = 200 }) {
   const [hover, setHover] = useState(null);
-  const W = 560;
+  // draw at the real pixel width so text stays 11px whatever the panel size
+  const boxRef = useRef(null);
+  const [W, setW] = useState(560);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const H = height;
   const pad = { top: 12, right: 8, bottom: 28, left: 44 };
   const innerW = W - pad.left - pad.right;
   const innerH = H - pad.top - pad.bottom;
-  const max = niceMax(Math.max(...data.map((d) => d.value), 0));
+  const rawMax = niceMax(Math.max(...data.map((d) => d.value), 0));
+  // whole-number data (e.g. order counts) never gets a "0.5" tick
+  const max = data.every((d) => Number.isInteger(d.value)) && rawMax < 4 ? 4 : rawMax;
   const ticks = [0, max / 2, max];
   const slot = innerW / data.length;
   const barW = Math.min(36, slot * 0.5);
   const y = (v) => pad.top + innerH - (v / max) * innerH;
 
   return (
-    <figure className="relative">
+    <figure ref={boxRef} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={title}>
         {ticks.map((t) => (
           <g key={t}>

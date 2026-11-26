@@ -106,10 +106,38 @@ export default function Mechanics() {
     { key: "vehicleTypes", header: "Car types", sortable: false, render: (m) => <VehicleTypeBadges types={m.vehicleTypes} max={2} size="xs" expandable={false} /> },
     { key: "services", header: "Services", sortValue: (m) => m.services.length, cellClassName: "tabular-nums", render: (m) => m.services.length },
     { key: "orders", header: "Orders", sortValue: (m) => orderCount[m._id] ?? 0, cellClassName: "tabular-nums", render: (m) => orderCount[m._id] ?? 0 },
+    {
+      key: "subscriptionEndsAt",
+      header: "Plan",
+      sortValue: (m) => (m.subscriptionEndsAt ? new Date(m.subscriptionEndsAt).getTime() : 0),
+      render: (m) =>
+        m.subscriptionEndsAt && new Date(m.subscriptionEndsAt) > new Date() ? (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-emerald-700">until {new Date(m.subscriptionEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+        ) : (
+          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-rose-700">{m.subscriptionEndsAt ? "expired" : "no plan"}</span>
+        ),
+    },
     { key: "createdAt", header: "Joined", sortValue: (m) => new Date(m.createdAt).getTime(), render: (m) => <span className="text-xs whitespace-nowrap text-slate-500">{date(m.createdAt)}</span> },
   ];
 
   const isNew = editing && !editing._id;
+  const active = editing?.subscriptionEndsAt && new Date(editing.subscriptionEndsAt) > new Date();
+
+  // admin plan controls: extend by 30 days from the later of today / current end, or end the plan now
+  const setPlanEnd = async (endsAt) => {
+    try {
+      const { data } = await api.put(`/admin/mechanics/${editing._id}/subscription`, { endsAt, plan: editing.subscriptionPlan ?? "monthly" });
+      upsert(data);
+      setEditing((f) => ({ ...f, subscriptionEndsAt: data.subscriptionEndsAt, subscriptionPlan: data.subscriptionPlan }));
+      toast.success(endsAt ? "Plan extended" : "Plan ended – garage hidden from the map");
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+  const extend30 = () => {
+    const base = active ? new Date(editing.subscriptionEndsAt) : new Date();
+    setPlanEnd(new Date(base.getTime() + 30 * 86_400_000).toISOString());
+  };
   return (
     <>
       <PageHeader
@@ -156,6 +184,18 @@ export default function Mechanics() {
       >
         {editing && (
           <form id="mechanic-form" onSubmit={save} className="space-y-8">
+            {!isNew && (
+              <section className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 ring-1 ${active ? "bg-emerald-50 ring-emerald-100" : "bg-rose-50 ring-rose-100"}`} data-testid="admin-plan">
+                <p className="text-sm">
+                  <b>{active ? "On the map" : "Hidden from the map"}</b> ·{" "}
+                  {editing.subscriptionEndsAt ? `plan ${active ? "until" : "ended"} ${new Date(editing.subscriptionEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "never subscribed"}
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={extend30}>+30 days</Button>
+                  {active && <Button type="button" size="sm" variant="danger" onClick={() => setPlanEnd(null)}>End plan</Button>}
+                </div>
+              </section>
+            )}
             {!isNew && (
               <div className="flex flex-wrap gap-2">
                 <Button href={`${CLIENT_URL}/store/${editing._id}`} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">

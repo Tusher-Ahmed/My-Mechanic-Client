@@ -31,7 +31,13 @@ async function seed(request) {
         services: g.services.map(([serviceName, price]) => ({ serviceName, price })),
       },
     });
-    mechanics.push(await res.json());
+    const m = await res.json();
+    mechanics.push(m);
+    // garages need an active plan to be on the map – buy one through the demo checkout
+    const h = { headers: { Authorization: `Bearer ${m.token}` } };
+    const checkout = await (await request.post(`${API_URL}/subscriptions/checkout`, { data: { plan: "monthly" }, ...h })).json();
+    await request.post(`${API_URL}/subscriptions/demo/${checkout.tranId}/pay`, { data: { outcome: "success" }, ...h });
+    await request.post(`${API_URL}/notifications/read-all`, h); // they've seen the "payment received" message
   }
   await request.post(`${API_URL}/auth/user/register`, { data: CUSTOMER });
   return mechanics;
@@ -254,6 +260,12 @@ test("client showcase", async ({ page, browser, request }) => {
   await shot(page, "17b-customer-my-cars");
 
   // 5. Mechanic shop editor + registration wizard + other pages
+  // the garage's own business numbers (the completed ৳2,220 job)
+  await mech.getByRole("tab", { name: "Revenue" }).click();
+  await expect(mech.getByTestId("mechanic-revenue")).toContainText("৳2,220");
+  await pause(mech, 1500);
+  await mech.screenshot({ path: path.join(OUT, "17f-mechanic-revenue.png"), fullPage: true });
+
   await mech.getByRole("tab", { name: "My shop" }).click();
   await pause(mech, 2500);
   await mech.screenshot({ path: path.join(OUT, "18-mechanic-my-shop.png"), fullPage: true });

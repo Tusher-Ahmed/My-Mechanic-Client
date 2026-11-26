@@ -129,7 +129,7 @@ export function Modal({ open, onClose, title, children, size = "md", labelledBy 
 /* ---------------- Tabs with sliding indicator ---------------- */
 export function Tabs({ tabs, value, onChange, id = "tabs", className = "" }) {
   return (
-    <div role="tablist" className={`inline-flex gap-1 rounded-2xl bg-slate-100 p-1 ${className}`}>
+    <div role="tablist" className={`inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1 [scrollbar-width:none] ${className}`}>
       {tabs.map((t) => {
         const active = t.value === value;
         return (
@@ -138,7 +138,7 @@ export function Tabs({ tabs, value, onChange, id = "tabs", className = "" }) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(t.value)}
-            className={`relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors duration-150 ${active ? "text-ink-900" : "text-slate-500 hover:text-ink-800"}`}
+            className={`relative flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors duration-150 ${active ? "text-ink-900" : "text-slate-500 hover:text-ink-800"}`}
           >
             {active && (
               <motion.span layoutId={`${id}-pill`} className="absolute inset-0 rounded-xl bg-white shadow-sm" transition={{ type: "spring", stiffness: 500, damping: 38 }} />

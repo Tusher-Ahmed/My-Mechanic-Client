@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { Banknote, CheckCircle2, ClipboardList, Clock, Flag, Hourglass, Settings, Store, Wrench, XCircle } from "lucide-react";
+import { Banknote, BarChart3, CheckCircle2, ClipboardList, Clock, Crown, Flag, Hourglass, Settings, Store, Wrench, XCircle } from "lucide-react";
+import SubscriptionPanel, { RenewBanner } from "../components/SubscriptionPanel";
+import MechanicRevenue from "../components/MechanicRevenue";
+import { useSubscription } from "../lib/subscription";
 import { useAuth } from "../context/AuthContext";
 import { errorMessage } from "../lib/api";
 import { money } from "../lib/format";
@@ -126,7 +130,18 @@ function ShopForm() {
 
 export default function MechanicDashboard() {
   const { account } = useAuth();
-  const [tab, setTab] = useState("orders");
+  const [params, setParams] = useSearchParams();
+  const TABS = ["orders", "revenue", "subscription", "shop", "profile"];
+  const [tab, setTabState] = useState(() => (TABS.includes(params.get("tab")) ? params.get("tab") : "orders"));
+  const setTab = (t) => {
+    setTabState(t);
+    setParams(t === "orders" ? {} : { tab: t }, { replace: true });
+  };
+  useEffect(() => {
+    const t = params.get("tab");
+    if (TABS.includes(t)) setTabState(t);
+  }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { sub } = useSubscription();
   const [filter, setFilter] = useState("all");
   const { orders, setStatus, replace } = useMyOrders();
   const [accepting, setAccepting] = useState(null); // home-service order waiting for an arrival time
@@ -195,7 +210,11 @@ export default function MechanicDashboard() {
         </div>
       </motion.header>
 
-      <motion.div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4" initial="hidden" animate="show" variants={stagger(0.06)}>
+      <div className="mt-8">
+        <RenewBanner sub={sub} onOpen={() => setTab("subscription")} />
+      </div>
+
+      <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" initial="hidden" animate="show" variants={stagger(0.06)}>
         <Stat icon={Hourglass} label="New requests" value={count("pending")} tone="bg-amber-50 text-amber-600" />
         <Stat icon={Clock} label="In progress" value={count("accepted")} tone="bg-sky-50 text-sky-600" />
         <Stat icon={CheckCircle2} label="Completed" value={count("completed")} tone="bg-emerald-50 text-emerald-600" />
@@ -209,6 +228,8 @@ export default function MechanicDashboard() {
         onChange={setTab}
         tabs={[
           { value: "orders", label: "Orders", icon: <ClipboardList className="size-4" />, count: count("pending") || undefined },
+          { value: "revenue", label: "Revenue", icon: <BarChart3 className="size-4" /> },
+          { value: "subscription", label: "Subscription", icon: <Crown className="size-4" /> },
           { value: "shop", label: "My shop", icon: <Store className="size-4" /> },
           { value: "profile", label: "Profile", icon: <Settings className="size-4" /> },
         ]}
@@ -238,6 +259,8 @@ export default function MechanicDashboard() {
                 </div>
               </>
             ))}
+          {tab === "revenue" && (orders ? <MechanicRevenue orders={orders} /> : <div className="grid h-48 place-items-center"><GearLoader label="Loading" /></div>)}
+          {tab === "subscription" && <SubscriptionPanel sub={sub} />}
           {tab === "shop" && <ShopForm />}
           {tab === "profile" && (
             <div className="space-y-6">

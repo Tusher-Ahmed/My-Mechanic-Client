@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, LayoutDashboard, MapPin, Store, UserRound, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, Crown, LayoutDashboard, MapPin, Store, UserRound, Wrench } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { errorMessage } from "../lib/api";
+import { api, errorMessage } from "../lib/api";
+import { money } from "../lib/format";
+import { startCheckout } from "../lib/subscription";
 import LocationPicker from "../components/LocationPicker";
 import ServiceEditor from "../components/ServiceEditor";
 import { Gear } from "../components/mech";
@@ -18,6 +20,7 @@ const STEPS = [
   { key: "shop", label: "Shop", icon: Store },
   { key: "location", label: "Location", icon: MapPin },
   { key: "services", label: "Services", icon: Wrench },
+  { key: "plan", label: "Plan", icon: Crown },
 ];
 
 function validate(step, f) {
@@ -56,6 +59,11 @@ export default function MechanicRegister() {
     vehicleTypes: [...VEHICLE_TYPES],
   });
   const set = (e) => setF((x) => ({ ...x, [e.target.name]: e.target.value }));
+  const [plan, setPlan] = useState("monthly"); // monthly | yearly | later
+  const [plans, setPlans] = useState(null);
+  useEffect(() => {
+    api.get("/subscriptions/plans").then(({ data }) => setPlans(data.plans)).catch(() => {});
+  }, []);
 
   if (role === "mechanic")
     return (
@@ -87,8 +95,13 @@ export default function MechanicRegister() {
     try {
       const { location, ...rest } = f;
       await register("mechanic", { ...rest, latitude: location.latitude, longitude: location.longitude });
-      toast.success("Welcome aboard! Your garage is now on the map.");
-      navigate("/mechanic");
+      if (plan === "later") {
+        toast("Account created – choose a plan any time to appear on the map.");
+        navigate("/mechanic?tab=subscription");
+      } else {
+        toast.success("Account created – one last step: payment.");
+        await startCheckout(plan, navigate);
+      }
     } catch (err) {
       setError(errorMessage(err));
       if (scope.current) animate(scope.current, { x: shake.x }, shake.transition);
@@ -106,11 +119,11 @@ export default function MechanicRegister() {
         <div className="text-center">
           <span className="eyebrow">For garages & mechanics</span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Register your garage</h1>
-          <p className="mt-2 text-slate-600">Four quick steps and drivers nearby can find and book you.</p>
+          <p className="mt-2 text-slate-600">Five quick steps and drivers nearby can find and book you.</p>
         </div>
 
         {/* progress */}
-        <ol className="mt-10 grid grid-cols-4 gap-2">
+        <ol className="mt-10 grid grid-cols-5 gap-2">
           {STEPS.map((s, i) => {
             const done = i < step;
             const current = i === step;
@@ -177,6 +190,39 @@ export default function MechanicRegister() {
                   <ServiceEditor value={f.services} onChange={(services) => setF((x) => ({ ...x, services }))} />
                 </div>
               )}
+              {step === 4 && (
+                <div>
+                  <p className="mb-4 text-sm text-slate-600">Choose a plan to appear on the map. Starter prices for your first period – no commission on bookings.</p>
+                  <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Plan">
+                    {["monthly", "yearly"].map((key) => {
+                      const p = plans?.[key];
+                      const on = plan === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setPlan(key)}
+                          className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${on ? "border-brand-500 bg-brand-50/70 ring-2 ring-brand-500/15" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                        >
+                          {key === "yearly" && <span className="absolute -top-2.5 right-3 rounded-full bg-accent-400 px-2 py-0.5 text-[11px] font-bold text-ink-900">Best value</span>}
+                          <span className="block text-sm font-semibold text-brand-700">{p?.label ?? key}</span>
+                          <span className="mt-1 block font-display text-2xl font-bold text-ink-900">
+                            {p ? money(p.introPrice) : "…"}
+                            <span className="text-sm font-medium text-slate-500"> first {key === "yearly" ? "year" : "month"}</span>
+                          </span>
+                          {p && <span className="block text-xs text-slate-500">then {money(p.price)} / {key === "yearly" ? "year" : "month"} · loyalty discount on renewals</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                    <input type="radio" name="plan-later" className="accent-brand-600" checked={plan === "later"} onChange={() => setPlan("later")} />
+                    <Clock className="size-4 text-slate-400" /> Decide later (your garage stays hidden until you choose a plan)
+                  </label>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -196,7 +242,7 @@ export default function MechanicRegister() {
               </Button>
             ) : (
               <Button variant="accent" onClick={submit} loading={busy}>
-                <Check className="size-4" /> Create my garage
+                <Check className="size-4" /> {plan === "later" || !plans ? "Create my garage" : `Create garage & pay ${money(plans[plan].introPrice)}`}
               </Button>
             )}
           </div>

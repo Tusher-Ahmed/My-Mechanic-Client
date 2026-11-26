@@ -43,7 +43,19 @@ async function seed(request: APIRequestContext) {
         ],
       })
     );
+    // each garage buys a plan through the demo checkout (yearly for the first, renewals for the second)
+    const token = mechs[i].token;
+    const plans = i === 0 ? ["yearly"] : i === 1 ? ["monthly", "monthly"] : ["monthly"];
+    for (const plan of plans) {
+      const checkout = await post("subscriptions/checkout", { plan }, token);
+      await post(`subscriptions/demo/${checkout.tranId}/pay`, { outcome: "success" }, token);
+    }
   }
+  // a garage that never paid (shows up under "Hidden from the map")
+  await post("auth/mechanic/register", {
+    shopname: "Sleepy Garage", username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
+    latitude: 23.75, longitude: 90.39, services: [{ serviceName: "Car wash", price: 300 }],
+  });
   const people = ["Nusrat Jahan", "Arif Rahman", "Sadia Islam", "Tanvir Ahmed"];
   const users = [];
   for (const [i, username] of people.entries()) {

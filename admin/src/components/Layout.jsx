@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ClipboardList, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, ShieldCheck, Users, Wrench, X } from "lucide-react";
+import { Banknote, ClipboardList, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, ShieldCheck, Users, Wrench, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { CLIENT_URL } from "../lib/api";
 import { gearPath } from "./mech";
@@ -11,6 +11,7 @@ import { dur, ease, easeExit } from "../lib/motion";
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/orders", label: "Orders", icon: ClipboardList },
+  { to: "/revenue", label: "Revenue", icon: Banknote },
   { to: "/mechanics", label: "Mechanics", icon: Wrench },
   { to: "/users", label: "Customers", icon: Users },
   { to: "/messages", label: "Messages", icon: Mail },

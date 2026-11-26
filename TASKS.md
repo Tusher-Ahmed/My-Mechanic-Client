@@ -50,7 +50,7 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 
 ## Phase T – Automated tests (Playwright, `e2e/`)
 - [x] T.1 Playwright workspace, isolated test DB, auto-started test API
-- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (97 passing)
+- [x] T.2 API tests: health, auth, mechanics, orders, messages, admin, notifications (106 passing)
 - [x] T.3 TESTING.md test-case register
 - [x] T.3b Visual showcase (`npm run showcase`): real browser walk-through, 25 screenshots + video, run after every task
 - [ ] T.4 Client UI tests (UI-CL-01…16) after Phase 3
@@ -81,15 +81,15 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [x] D.4 Booking → arrival flow: "mechanic comes to me" vs "I bring the car", distance-based travel charge (per-garage pricing + service radius), arrival time on accept (suggested from distance, "running late" updates), order numbers MM-1001…, 4-digit customer code verified by the mechanic on arrival (5 tries, 15-min lock) before completing – 12 API tests + showcase
 - [x] D.3 Showcases run against production builds; fix blank page after refreshing a lazy page (Suspense inside layout) + regression test
 
-## Phase P – Mechanic subscriptions (business model) – SSLCommerz sandbox (demo checkout fallback when no keys)
-- [ ] P.1 Plans: monthly + yearly, low introductory first period, loyal-customer renewal discount (admin-editable)
-- [ ] P.2 Choose a plan during mechanic registration → demo checkout → subscription active
-- [ ] P.3 Only garages with an active subscription appear on the map / can receive orders
-- [ ] P.4 Expiry reminders (7 days, 1 day), renew screen with returning-customer discount
-- [ ] P.5 Admin "Revenue" page: subscription income per month / plan, new vs renewals, active + expiring garages; plan prices
-- [ ] P.7 Mechanic dashboard: own orders + revenue over time (monthly charts)
-- [ ] P.8 Payment: SSLCommerz sandbox with server-side validation; demo checkout when SSLCZ keys are not set
-- [ ] P.6 API tests + showcase
+## Phase P – Mechanic subscriptions (business model) – demo checkout (real gateway can be added later)
+- [x] P.1 Plans: monthly + yearly, low introductory first period, loyal-customer renewal discount (admin-editable)
+- [x] P.2 Choose a plan during mechanic registration → demo checkout → subscription active
+- [x] P.3 Only garages with an active subscription appear on the map / can receive orders
+- [x] P.4 Expiry reminders (7 days, 1 day), renew screen with returning-customer discount
+- [x] P.5 Admin "Revenue" page: subscription income per month / plan, new vs renewals, active + expiring garages; plan prices
+- [x] P.7 Mechanic dashboard: own orders + revenue over time (monthly charts)
+- [ ] P.8 (later) Real payment gateway (SSLCommerz / bKash) – checkout step is isolated in routes/subscriptions.js `startCheckout()`
+- [x] P.6 API tests + showcase
 
 ## Phase 5 – Deployment prep
 - [ ] 5.1 `render.yaml` for the backend; `vercel.json` (SPA routing) for client and admin
@@ -104,4 +104,4 @@ Test cases are tracked separately in [TESTING.md](TESTING.md).
 - [ ] 6.5 Push branch / merge to `main`
 
 ## Later – to discuss after the build (no code now)
-- [ ] B.1 Business model / admin profit plan (commission, featured garages, subscriptions, partnerships…) – interview talking points
+- [x] B.1 Business model chosen: mechanic subscriptions (Phase P). Interview talking points still to write up – (commission, featured garages, subscriptions, partnerships…) – interview talking points

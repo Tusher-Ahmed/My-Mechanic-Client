@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeft, Check, ClipboardList, MapPinned, Navigation, ShoppingCart, Store as StoreIcon, UserRound, Wrench, Truck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, ClipboardList, MapPinned, Navigation, ShoppingCart, Store as StoreIcon, UserRound, Wrench, Truck } from "lucide-react";
 import { api, errorMessage } from "../lib/api";
 import { getPositionOnce, googleMapsUrl } from "../lib/map";
 import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
@@ -129,7 +129,8 @@ export default function Store() {
   const tripKm = mode === "home" && here.pos && shop ? distanceKm(shop, here.pos) : null;
   const tooFar = tripKm != null && pricing.maxDistanceKm && tripKm > pricing.maxDistanceKm;
   const travelFee = tripKm != null ? travelFeeFor(pricing, tripKm) : 0;
-  const total = servicesTotal + (mode === "home" ? travelFee : 0);
+  // the travel charge only applies once there is something to book
+  const total = chosen.length ? servicesTotal + (mode === "home" ? travelFee : 0) : 0;
 
   // locate the customer when they choose home service (estimate only – the server decides the real charge)
   useEffect(() => {
@@ -138,6 +139,7 @@ export default function Store() {
     getPositionOnce().then((pos) => setHere(pos ? { status: "ok", pos } : { status: "denied", pos: null }));
   }, [mode, here.status]);
   const homeBlocked = mode === "home" && (here.status !== "ok" || tooFar);
+  const closed = shop?.acceptingOrders === false; // garage's plan has expired
   const toggle = (sid) => setSelected((list) => (list.includes(sid) ? list.filter((x) => x !== sid) : [...list, sid]));
 
   const carReady = isVehicleComplete(car.vehicle);
@@ -241,6 +243,16 @@ export default function Store() {
           </Button>
         </div>
       </motion.section>
+
+      {closed && (
+        <div role="alert" data-testid="shop-closed" className="mt-6 flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-amber-900 ring-1 ring-amber-200">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+          <p className="text-sm">
+            <b>{shop.shopname} isn't taking bookings right now.</b> You can still see its services, but booking is disabled.{" "}
+            <Link to="/map" className="font-semibold underline">Find another garage nearby</Link>
+          </p>
+        </div>
+      )}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <section>
@@ -407,8 +419,8 @@ export default function Store() {
                 {role === "user" && chosen.length > 0 && (
                   <Field as="textarea" label="Note for the mechanic (optional)" className="mt-5" rows={3} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Car won't start, I'm near Mirpur 10" />
                 )}
-                <Button size="lg" className="mt-5 w-full" disabled={role === "user" && (chosen.length === 0 || !carSupported || homeBlocked)} loading={busy} onClick={book}>
-                  {role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : homeBlocked ? (tooFar ? "Too far for home service" : "Waiting for your location") : "Book now"}
+                <Button size="lg" className="mt-5 w-full" disabled={closed || (role === "user" && (chosen.length === 0 || !carSupported || homeBlocked))} loading={busy} onClick={book}>
+                  {closed ? "Not taking bookings" : role !== "user" ? "Log in to book" : chosen.length === 0 ? "Select a service" : !carReady ? "Add your car details" : homeBlocked ? (tooFar ? "Too far for home service" : "Waiting for your location") : "Book now"}
                 </Button>
               </>
             )}

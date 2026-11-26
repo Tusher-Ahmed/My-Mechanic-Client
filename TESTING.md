@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 97 tests
+## 1. API tests (`e2e/tests/api`) – 106 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -305,6 +305,19 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-TRIP-11 | Wrong codes: 5 tries, then a 15-minute lock (even the right code) | ✅ |
 | API-TRIP-12 | Only the assigned mechanic can verify; malformed / injected codes rejected | ✅ |
 
+### Subscriptions – `subscriptions.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-SUB-01 | Garage without a plan: hidden from the map, bookings refused, store page says not accepting | ✅ |
+| API-SUB-02 | First plan at the starter price (৳99 / ৳1,499), activates the garage, notifies the mechanic | ✅ |
+| API-SUB-03 | Returning customers get the loyalty discount (20 %); renewing early stacks the days | ✅ |
+| API-SUB-04 | Cancelled payments don't activate; no re-use; can't pay someone else's checkout | ✅ |
+| API-SUB-05 | Expired plan hides the garage; renewal at the discount brings it back from today | ✅ |
+| API-SUB-06 | Reminders at 7 days, 1 day and on expiry – each sent once | ✅ |
+| API-SUB-07 | Only mechanics can buy; invalid plans rejected; plan list public | ✅ |
+| API-SUB-08 | Admin revenue report: totals, this month, new vs renewals, per plan, garages, recent payments | ✅ |
+| API-SUB-09 | Admin edits plan prices / discount; mechanics see new prices; invalid values rejected | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -323,6 +336,11 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 | Mechanic accepts → customer phone revealed; customer notified **live** + mechanic phone shown; car saved in "My cars" | ✅ 14–17b | ✅ |
 | Shop editor (services + location map), About, Contact, 404, register-wizard validation | ✅ 18–22 | ✅ |
 | Phone width (390px): home, menu, map – no horizontal scroll | ✅ 23–25 | ✅ |
+
+**Subscription walk-through** (`subscription.showcase.ts`): new garage → red "choose a plan" banner on every visit →
+plans (৳99 / ৳1,499 starter) → demo checkout (Nagad, "no real money") → paid → banner gone, on the map, next renewal
+shows 20 % off → an expired garage: customers see "not taking bookings" with booking disabled, the mechanic sees
+"Your plan expired … 20 % off" + a reminder → admin Revenue page. Screenshots: `sub-*.png`. ✅
 
 **Layout stress** (`layout-stress.showcase.ts`, desktop + phone): the API is faked with extreme garages –
 12 car types (incl. unknown future types), very long shop / owner / address / service names, 15 services.
