@@ -1,0 +1,51 @@
+.MechanicRegister {
+  flex: 4;
+  padding: 30px;
+}
+.heading h2 {
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  margin-bottom: 3rem;
+}
+.leftSide input {
+  margin-bottom: 5px;
+  width: 80%;
+  left: 10%;
+}
+.rightSide input {
+  display: block;
+}
+.locationcard {
+  width: 40%;
+  height: auto;
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.toggleButton {
+  position: absolute;
+  top: 5%;
+  right: 3%;
+  color: red;
+  font-size: 10px;
+}
+.mechaLocation {
+  background-color: rgb(12, 0, 0);
+  font-size: 0.7rem;
+  color: #fff;
+  padding: 3px 5px;
+  margin: 10px 0;
+}
+.mechaLocation:hover {
+  background-color: #fff;
+  color: #000;
+}
+@media (max-width: 991.98px) {
+  .locationcard {
+    width: 50%;
+  }
+}
+.successN {
+  color: green;
+}

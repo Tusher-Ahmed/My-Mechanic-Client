@@ -1,0 +1,10 @@
+.emailInfo {
+  flex: 4;
+  padding: 20px;
+  height: 100vh;
+}
+.boxMessage {
+  margin: 10px 0;
+  padding: 20px;
+  border: 1px solid #000;
+}

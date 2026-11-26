@@ -1,0 +1,10 @@
+.updateUser {
+  flex: 4;
+}
+.settinngForm {
+  padding: 30px;
+}
+.settinngForm input {
+  padding: 5px 0;
+  margin: 20px 0;
+}

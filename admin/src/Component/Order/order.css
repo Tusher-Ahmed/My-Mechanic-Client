@@ -1,0 +1,16 @@
+.OrderList {
+  flex: 4;
+  padding: 10px;
+}
+.btnDelete {
+  background-color: red;
+  color: #fff;
+  padding: 3px 25px;
+  border: none;
+  border: 1px solid red;
+  border-radius: 20px;
+}
+.btnDelete:hover {
+  background-color: #fff;
+  color: red;
+}

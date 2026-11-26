@@ -1,0 +1,30 @@
+.feature {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 7%;
+}
+
+.featureItem {
+  flex: 1;
+  margin: 0 20px;
+  padding: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0px 0px 12px 0px rgba(0, 0, 0, 0.5);
+}
+.featureTitle {
+  font-size: 20px;
+  text-align: center;
+}
+.featureItem p {
+  font-size: 40px;
+  font-weight: bold;
+  text-align: center;
+}
+.arrow {
+  margin-left: 15px;
+  color: green;
+}

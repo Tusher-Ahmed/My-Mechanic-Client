@@ -1,0 +1,52 @@
+.RegisterUser {
+  flex: 4;
+  width: 80%;
+  left: 10%;
+  padding: 25px 3px;
+  border-radius: 20px;
+  height: fit-content;
+}
+.logo {
+  color: #fff;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.formStyle {
+  position: relative;
+  width: 80%;
+  left: 10%;
+}
+.formStyle input {
+  border: none;
+  border-bottom: 1px solid #000;
+  background-color: rgba(255, 255, 255, 0.713);
+}
+.btnR {
+  background-color: #000 !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  border: none;
+  width: 100%;
+  margin-top: 10px;
+}
+.successN {
+  color: green;
+  font-size: 12px;
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.failure {
+  color: red;
+  font-size: 12px;
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+@media (max-width: 560px) {
+  .RegisterUser {
+    width: 90%;
+  }
+}
