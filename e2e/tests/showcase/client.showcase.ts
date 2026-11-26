@@ -23,6 +23,7 @@ async function seed(request) {
   for (const [i, g] of GARAGES.entries()) {
     const res = await request.post(`${API_URL}/auth/mechanic/register`, {
       data: {
+        inspectionFee: 300,
         ...g,
         email: `garage${i + 1}@showcase.test`,
         phone: `0182233440${i}`,

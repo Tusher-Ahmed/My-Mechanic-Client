@@ -29,6 +29,8 @@ const MechanicSchema = new Schema({
   longitude: { type: Number, required: [true, "Shop location is required"], min: -180, max: 180 },
   services: { type: [ServiceSchema], default: [] },
   // travel charge for home service: free within freeWithinKm, else base + perKm × distance (৳, rounded to 10)
+  // fee for an inspection visit ("not sure what's wrong") – each garage sets its own, required when opening a shop
+  inspectionFee: { type: Number, min: [0, "Inspection fee can't be negative"], max: 100_000, default: 300 },
   travelPricing: {
     type: new Schema(
       {
@@ -58,6 +60,6 @@ const MechanicSchema = new Schema({
 MechanicSchema.plugin(accountPlugin);
 
 /** Fields that anyone (not logged in) may see on the map / store page. */
-export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services vehicleTypes travelPricing createdAt";
+export const PUBLIC_MECHANIC_FIELDS = "username shopname address latitude longitude services vehicleTypes travelPricing inspectionFee createdAt";
 
 export const Mechanic = model("Mechanic", MechanicSchema);

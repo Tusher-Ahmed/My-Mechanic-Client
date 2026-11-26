@@ -34,6 +34,7 @@ function validate(step, f) {
   if (step === 1 && f.shopname.trim().length < 3) return "Shop name must be at least 3 characters.";
   if (step === 1 && f.vehicleTypes.length === 0) return "Select at least one car type you service.";
   if (step === 2 && (f.location.latitude === "" || f.location.longitude === "" || f.location.latitude == null)) return "Please set your shop's location on the map.";
+  if (step === 3 && (String(f.inspectionFee).trim() === "" || !(Number(f.inspectionFee) >= 0))) return "Set your inspection fee – what you charge to find an unknown problem.";
   if (step === 3 && f.services.length === 0) return "Add at least one service with a price.";
   return "";
 }
@@ -56,6 +57,7 @@ export default function MechanicRegister() {
     address: "",
     location: { latitude: "", longitude: "" },
     services: [],
+    inspectionFee: "",
     vehicleTypes: [...VEHICLE_TYPES],
   });
   const set = (e) => setF((x) => ({ ...x, [e.target.name]: e.target.value }));
@@ -94,7 +96,7 @@ export default function MechanicRegister() {
     setBusy(true);
     try {
       const { location, ...rest } = f;
-      await register("mechanic", { ...rest, latitude: location.latitude, longitude: location.longitude });
+      await register("mechanic", { ...rest, inspectionFee: Number(f.inspectionFee), latitude: location.latitude, longitude: location.longitude });
       if (plan === "later") {
         toast("Account created – choose a plan any time to appear on the map.");
         navigate("/mechanic?tab=subscription");
@@ -186,6 +188,21 @@ export default function MechanicRegister() {
               )}
               {step === 3 && (
                 <div>
+                  <div className="mb-6 rounded-2xl bg-amber-50/60 p-4 ring-1 ring-amber-200">
+                    <Field
+                      label="Inspection fee (৳) – required"
+                      name="inspectionFee"
+                      type="number"
+                      min="0"
+                      step="10"
+                      inputMode="numeric"
+                      value={f.inspectionFee}
+                      onChange={set}
+                      placeholder="e.g. 300"
+                      hint="For customers who don't know what's wrong: you find the problem for this fee (+ travel), then they can book the fix."
+                      className="max-w-sm"
+                    />
+                  </div>
                   <p className="mb-4 text-sm text-slate-600">What do you offer? You can change services and prices any time later.</p>
                   <ServiceEditor value={f.services} onChange={(services) => setF((x) => ({ ...x, services }))} />
                 </div>

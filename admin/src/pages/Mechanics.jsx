@@ -22,6 +22,7 @@ const blank = {
   latitude: 23.7808875,
   longitude: 90.2792371,
   vehicleTypes: [...VEHICLE_TYPES],
+  inspectionFee: "",
   travelPricing: { ...DEFAULT_TRAVEL_PRICING },
   services: [],
 };
@@ -51,6 +52,7 @@ export default function Mechanics() {
       latitude: Number(rest.latitude),
       longitude: Number(rest.longitude),
       services: rest.services.map(({ _id: sid, serviceName, price }) => ({ _id: sid, serviceName, price })),
+      inspectionFee: rest.inspectionFee === "" || rest.inspectionFee == null ? undefined : Number(rest.inspectionFee),
       travelPricing: numericPricing({ ...DEFAULT_TRAVEL_PRICING, ...(rest.travelPricing || {}) }),
       ...(password ? { password } : {}),
     };
@@ -237,6 +239,20 @@ export default function Mechanics() {
                 <CarTypeChooser multiple ariaLabel="Car types serviced" placeholder="Select car types" value={editing.vehicleTypes} onChange={(vehicleTypes) => setEditing((f) => ({ ...f, vehicleTypes }))} />
               </div>
               {editing.vehicleTypes.length === 0 && <p className="mt-2 text-sm text-rose-600">Select at least one car type.</p>}
+            </section>
+            <section>
+              <h3 className="mb-3 text-sm font-bold">Inspection fee</h3>
+              <Field
+                label="Inspection fee ৳ (required)"
+                type="number"
+                min="0"
+                step="10"
+                required
+                value={editing.inspectionFee ?? ""}
+                onChange={set("inspectionFee")}
+                hint="Charged when a customer doesn't know the problem"
+                className="max-w-xs"
+              />
             </section>
             <section>
               <h3 className="mb-3 text-sm font-bold">Travel charge (home service)</h3>

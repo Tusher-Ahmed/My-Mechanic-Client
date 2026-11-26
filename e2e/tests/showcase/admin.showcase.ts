@@ -27,6 +27,7 @@ async function seed(request: APIRequestContext) {
     mechs.push(
       await post("auth/mechanic/register", {
         shopname: `${shopname}`,
+        inspectionFee: 300 + i * 50,
         username,
         email: `adm-garage${i}-${tag}@showcase.test`,
         phone: `0191100000${i}`,
@@ -62,7 +63,7 @@ async function seed(request: APIRequestContext) {
   }
   // a garage that never paid (shows up under "Hidden from the map")
   await post("auth/mechanic/register", {
-    shopname: "Sleepy Garage", username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
+    shopname: "Sleepy Garage", inspectionFee: 250, username: "Nobody Yet", email: `adm-sleepy-${tag}@showcase.test`, phone: "01911000009", nid: "9876543219", password: "secret123",
     latitude: 23.75, longitude: 90.39, services: [{ serviceName: "Car wash", price: 300 }],
   });
   const people = ["Nusrat Jahan", "Arif Rahman", "Sadia Islam", "Tanvir Ahmed"];

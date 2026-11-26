@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 112 tests
+## 1. API tests (`e2e/tests/api`) – 119 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -328,6 +328,17 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-CXL-04 | Cancelled orders never count as money earned (top garages, revenue) | ✅ |
 | API-CXL-05 | Admin can cancel; a default reason is recorded | ✅ |
 
+### Inspection visits – `inspection.spec.ts`
+| ID | Case | Status |
+|---|---|---|
+| API-INS-01 | Opening a shop requires an inspection fee; each garage sets and edits its own | ✅ |
+| API-INS-02 | An inspection charges only the garage's fee plus travel | ✅ |
+| API-INS-03 | An order is an inspection or services – never empty, never both; the browser can't set the fee | ✅ |
+| API-INS-04 | Completing an inspection needs findings; recommended services must be from the garage's list; customer notified | ✅ |
+| API-INS-05 | Follow-up order after a home inspection: travel waived within 24 h, linked to the inspection | ✅ |
+| API-INS-06 | Follow-up only to your own completed inspection at the same garage | ✅ |
+| API-INS-07 | Inspection fee counts as service revenue, travel stays separate | ✅ |
+
 ---
 
 ## 1b. Visual showcase (`e2e/tests/showcase`) – run after every task
@@ -351,6 +362,11 @@ screenshots to `e2e/showcase-output/` (video in `e2e/test-results/`). It also as
 plans (৳99 / ৳1,499 starter) → demo checkout (Nagad, "no real money") → paid → banner gone, on the map, next renewal
 shows 20 % off → an expired garage: customers see "not taking bookings" with booking disabled, the mechanic sees
 "Your plan expired … 20 % off" + a reminder → admin Revenue page. Screenshots: `sub-*.png`. ✅
+
+**Inspection walk-through** (`inspection.showcase.ts`): customer picks "Not sure what's wrong? Book an inspection"
+(fee + travel only, services and inspection are mutually exclusive), mechanic finishes it with findings and recommended
+services, customer sees the findings and books them in one tap – recommended services preselected, travel waived.
+Screenshots: `inspection-*.png`. ✅
 
 **Cancel walk-through** (`cancel.showcase.ts`): styled dialog instead of the browser confirm box (asserts no native
 dialog ever opens), reason required, mechanic cancels a verified job and declines a new one, customer sees who cancelled

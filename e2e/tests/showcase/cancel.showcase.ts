@@ -22,7 +22,7 @@ test("cancel with a reason", async ({ page, browser, request }) => {
   const shopname = `Cancel Test Garage ${t}`;
   const mech = await call("POST", "auth/mechanic/register", {
     username: "Rubel Hasan", email: `cxl-m-${t}@showcase.test`, phone: "01811223344", nid: "1234509876", password: "secret123",
-    shopname, latitude: 23.78, longitude: 90.4, services: [{ serviceName: "Brake repair", price: 1500 }, { serviceName: "Oil change", price: 800 }],
+    shopname, inspectionFee: 400, latitude: 23.78, longitude: 90.4, services: [{ serviceName: "Brake repair", price: 1500 }, { serviceName: "Oil change", price: 800 }],
   });
   const admin = await call("POST", "auth/admin/login", TEST_ADMIN);
   await call("PUT", `admin/mechanics/${mech.account._id}/subscription`, { endsAt: new Date(Date.now() + 30 * 86_400_000).toISOString() }, admin.token);

@@ -34,6 +34,7 @@ export async function registerMechanic(request: APIRequestContext, overrides: Re
     nid: "1234567890",
     password: "secret123",
     shopname: `Auto Works ${id}`,
+    inspectionFee: 300,
     latitude: 23.78,
     longitude: 90.28,
     services: [

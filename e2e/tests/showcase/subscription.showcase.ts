@@ -17,7 +17,7 @@ test("subscription showcase", async ({ page, request, browser }) => {
   const register = async (shopname: string, email: string) =>
     (
       await request.post(`${API_URL}/auth/mechanic/register`, {
-        data: { username: "Shapla Mia", email, phone: "01733445566", nid: "1928374650", password: "secret123", shopname, address: "Mohammadpur", latitude: 23.7651, longitude: 90.3589, services: [{ serviceName: "Engine tune-up", price: 1500 }, { serviceName: "Oil change", price: 750 }] },
+        data: { username: "Shapla Mia", email, phone: "01733445566", nid: "1928374650", password: "secret123", shopname, inspectionFee: 350, address: "Mohammadpur", latitude: 23.7651, longitude: 90.3589, services: [{ serviceName: "Engine tune-up", price: 1500 }, { serviceName: "Oil change", price: 750 }] },
       })
     ).json();
 

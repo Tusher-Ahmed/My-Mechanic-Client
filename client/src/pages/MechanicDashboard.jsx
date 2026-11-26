@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { Banknote, BarChart3, CheckCircle2, ClipboardList, Clock, Crown, Flag, Hourglass, Settings, Store, Wrench, XCircle } from "lucide-react";
+import { Banknote, BarChart3, CheckCircle2, ClipboardList, Clock, Crown, Flag, Hourglass, Search, Settings, Store, Wrench, XCircle } from "lucide-react";
 import SubscriptionPanel, { RenewBanner } from "../components/SubscriptionPanel";
 import MechanicRevenue from "../components/MechanicRevenue";
 import { useSubscription } from "../lib/subscription";
@@ -16,6 +16,7 @@ import LocationPicker from "../components/LocationPicker";
 import { CarTypeChooser } from "../components/VehiclePicker";
 import { EtaPickerModal } from "../components/TripPanel";
 import CancelOrderDialog from "../components/CancelOrderDialog";
+import FindingsDialog from "../components/FindingsDialog";
 import { DEFAULT_TRAVEL_PRICING, travelFeeFor } from "../lib/pricing";
 
 const numericPricing = (p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, Number(v) || 0]));
@@ -46,6 +47,7 @@ function ShopForm() {
     shopname: account.shopname,
     address: account.address ?? "",
     services: account.services ?? [],
+    inspectionFee: account.inspectionFee ?? 300,
     vehicleTypes: account.vehicleTypes ?? [],
     travelPricing: { ...DEFAULT_TRAVEL_PRICING, ...(account.travelPricing || {}) },
     location: { latitude: account.latitude, longitude: account.longitude },
@@ -60,6 +62,7 @@ function ShopForm() {
         shopname: form.shopname,
         address: form.address,
         services: form.services.map(({ _id, serviceName, price }) => ({ _id, serviceName, price })),
+        inspectionFee: Number(form.inspectionFee) || 0,
         vehicleTypes: form.vehicleTypes,
         travelPricing: numericPricing(form.travelPricing),
         latitude: form.location.latitude,
@@ -88,6 +91,17 @@ function ShopForm() {
         </h3>
         <div className="mt-5">
           <ServiceEditor value={form.services} onChange={(services) => setForm({ ...form, services })} />
+        </div>
+      </div>
+      <div className="card p-6 sm:p-8">
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <Search className="size-5 text-amber-600" /> Inspection fee
+        </h3>
+        <p className="mt-1 mb-5 text-sm text-slate-500">
+          For customers who don't know what's wrong: you find the problem, they pay this (+ travel) and can then book the fix.
+        </p>
+        <div className="max-w-56">
+          <Field label="Inspection fee (৳)" type="number" min="0" step="10" required value={form.inspectionFee} onChange={(e) => setForm({ ...form, inspectionFee: e.target.value })} />
         </div>
       </div>
       <div className="card p-6 sm:p-8">
@@ -162,9 +176,17 @@ export default function MechanicDashboard() {
 
   const act = async (order, status, msg) => {
     if (status === "cancelled") return setCancelling(order); // ask for a reason first
+    if (status === "completed" && order.kind === "inspection") return setFinishing(order); // findings first
     if (await setStatus(order, status)) toast.success(msg);
   };
   const [cancelling, setCancelling] = useState(null);
+  const [finishing, setFinishing] = useState(null);
+  const confirmFindings = async (findings) => {
+    if (await setStatus(finishing, "completed", { findings })) {
+      toast.success("Inspection finished – the customer can now book the fix");
+      setFinishing(null);
+    }
+  };
   const confirmCancel = async (reason) => {
     const declining = cancelling.status === "pending";
     if (await setStatus(cancelling, "cancelled", { reason })) {
@@ -198,7 +220,7 @@ export default function MechanicDashboard() {
             title={o.verifiedAt ? undefined : "Verify the customer's code first"}
             onClick={() => act(o, "completed", "Marked as completed")}
           >
-            <Flag className="size-4" /> Mark completed
+            <Flag className="size-4" /> {o.kind === "inspection" ? "Finish inspection" : "Mark completed"}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => act(o, "cancelled", "Order cancelled")}>
             Cancel
@@ -287,6 +309,7 @@ export default function MechanicDashboard() {
         onClose={() => setCancelling(null)}
         onConfirm={confirmCancel}
       />
+      <FindingsDialog order={finishing} onClose={() => setFinishing(null)} onConfirm={confirmFindings} />
       <EtaPickerModal
         open={!!accepting}
         onClose={() => setAccepting(null)}

@@ -50,7 +50,7 @@ export const orderEvents = {
       recipient: order.mechanic._id,
       role: "mechanic",
       type: "order_new",
-      title: `New order ${ref(order)} from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
+      title: `New ${order.kind === "inspection" ? "inspection" : "order"} ${ref(order)} from ${order.user.username}${d != null ? ` · ${formatKm(d)} away` : ""}`,
       body: `${order.vehicle ? vehicleLabel(order.vehicle) + " – " : ""}${list(order.services)} · ৳${order.totalPrice.toLocaleString("en-US")}`,
       link: "/mechanic",
       order: order._id,
@@ -78,7 +78,20 @@ export const orderEvents = {
         );
         break;
       case "completed":
-        toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
+        if (order.kind === "inspection") {
+          const rec = order.findings?.recommended ?? [];
+          toUser(
+            "order_completed",
+            `Inspection finished – ${order.shopname} found the problem`,
+            [
+              order.findings?.note,
+              rec.length ? `Recommended: ${rec.map((s) => s.serviceName).join(", ")}. Book them from your order – no travel charge again within 24 h.` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .slice(0, 290)
+          );
+        } else toUser("order_completed", `Job completed by ${order.shopname}`, "Thanks for using My Mechanic. Drive safe!");
         break;
       case "cancelled":
         {
