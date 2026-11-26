@@ -113,7 +113,25 @@ export function NotificationsProvider({ children }) {
     await api.post("/notifications/read-all").catch(() => {});
   }, []);
 
-  const value = useMemo(() => ({ items, unread, ring, live, markRead, markAllRead, refresh }), [items, unread, ring, live, markRead, markAllRead, refresh]);
+  // delete one notification for good (removed from the database, not just hidden)
+  const remove = useCallback(
+    async (id) => {
+      const target = items.find((n) => n._id === id);
+      setItems((list) => list.filter((n) => n._id !== id));
+      if (target && !target.read) setUnread((u) => Math.max(0, u - 1));
+      try {
+        const { data } = await api.delete(`/notifications/${id}`);
+        setUnread(data.unread);
+        return true;
+      } catch {
+        refresh(); // put it back if the server refused
+        return false;
+      }
+    },
+    [items, refresh]
+  );
+
+  const value = useMemo(() => ({ items, unread, ring, live, markRead, markAllRead, remove, refresh }), [items, unread, ring, live, markRead, markAllRead, remove, refresh]);
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
 }
 

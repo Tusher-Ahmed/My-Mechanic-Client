@@ -33,7 +33,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 
 ---
 
-## 1. API tests (`e2e/tests/api`) – 119 tests
+## 1. API tests (`e2e/tests/api`) – 120 tests
 
 ### Health & infrastructure – `health.spec.ts`
 | ID | Case | Status |
@@ -115,6 +115,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-05 | Notifications are private (401 / 404 for others) | ✅ |
 | API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
+| API-NOTIF-08 | Deleting a notification (✕ in the bell) removes it from the database – only your own | ✅ |
 
 ### Car model & type – `vehicles.spec.ts`
 | ID | Case | Status |
@@ -249,6 +250,7 @@ Status legend: ✅ passing · ⏳ planned (written when that app is migrated)
 | API-NOTIF-05 | Notifications are private (401 / 404 for others) | ✅ |
 | API-NOTIF-06 | Live stream rejects missing / invalid token | ✅ |
 | API-NOTIF-07 | Live stream (SSE) delivers a notification instantly | ✅ |
+| API-NOTIF-08 | Deleting a notification (✕ in the bell) removes it from the database – only your own | ✅ |
 
 ### Car model & type – `vehicles.spec.ts`
 | ID | Case | Status |

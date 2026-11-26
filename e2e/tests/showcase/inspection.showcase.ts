@@ -110,4 +110,22 @@ test("inspection → findings → book the fix", async ({ page, browser, request
   await expect(follow).toContainText("৳2,600");
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(OUT, "inspection-06-orders.png"), fullPage: true });
+
+  // 4. notifications: the ✕ deletes one for good (still gone after a reload)
+  await page.getByTestId("notification-bell").filter({ visible: true }).click();
+  const items = page.getByTestId("notification-item");
+  const count = await items.count();
+  expect(count).toBeGreaterThan(1);
+  const first = items.first();
+  const title = (await first.locator("button").nth(1).locator("span").nth(1).textContent())!;
+  await first.hover();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, "inspection-07-notification-delete.png") });
+  await first.getByRole("button", { name: /^Delete notification/ }).click();
+  await expect(items).toHaveCount(count - 1);
+  await expect(page.getByRole("dialog", { name: "Notifications" })).not.toContainText(title);
+  await page.reload();
+  await page.getByTestId("notification-bell").filter({ visible: true }).click();
+  await expect(items).toHaveCount(count - 1);
+  await expect(page.getByRole("dialog", { name: "Notifications" })).not.toContainText(title);
 });

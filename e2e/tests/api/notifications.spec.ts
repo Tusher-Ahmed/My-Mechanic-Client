@@ -106,3 +106,25 @@ test("API-NOTIF-07 live stream delivers a notification instantly", async ({ requ
     controller.abort();
   }
 });
+
+test("API-NOTIF-08 deleting a notification removes it for good – only your own", async ({ request }) => {
+  const { mech, user, order } = await createOrderFixture(request);
+  await request.patch(`orders/${order._id}/status`, { data: { status: "accepted" }, ...auth(mech.session.token) });
+  const before = await list(request, user.session.token);
+  expect(before.unread).toBe(1);
+  const id = before.items[0]._id;
+
+  // someone else can't delete it
+  expect((await request.delete(`notifications/${id}`, auth(mech.session.token))).status()).toBe(404);
+  expect((await request.delete(`notifications/${id}`)).status()).toBe(401);
+  expect((await request.delete("notifications/not-an-id", auth(user.session.token))).status()).toBe(400);
+
+  const res = await request.delete(`notifications/${id}`, auth(user.session.token));
+  expect(res.status()).toBe(200);
+  expect(await res.json()).toEqual({ deleted: true, unread: 0 });
+  const after = await list(request, user.session.token);
+  expect(after.items.find((n) => n._id === id)).toBeUndefined();
+  expect(after.unread).toBe(0);
+  // gone from the database – deleting again finds nothing
+  expect((await request.delete(`notifications/${id}`, auth(user.session.token))).status()).toBe(404);
+});

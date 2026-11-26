@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
-import { Bell, BellOff, CheckCheck, CheckCircle2, ClipboardList, Info, PartyPopper, XCircle } from "lucide-react";
+import { Bell, BellOff, CheckCheck, CheckCircle2, ClipboardList, Info, PartyPopper, X, XCircle } from "lucide-react";
 import { useNotifications } from "../context/NotificationsContext";
 import { timeAgo } from "../lib/format";
 import { dur, ease, easeExit } from "../lib/motion";
@@ -16,7 +16,7 @@ const TYPE_STYLE = {
 };
 
 export default function NotificationBell() {
-  const { items, unread, ring, live, markRead, markAllRead } = useNotifications();
+  const { items, unread, ring, live, markRead, markAllRead, remove } = useNotifications();
   const [open, setOpen] = useState(false);
   const [bellScope, animateBell] = useAnimate();
   const wrapRef = useRef(null);
@@ -116,14 +116,34 @@ export default function NotificationBell() {
                 </div>
               ) : (
                 <motion.ul initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.03 } } }}>
+                  <AnimatePresence initial={false}>
                   {items.map((n) => {
                     const style = TYPE_STYLE[n.type] ?? TYPE_STYLE.system;
                     const Icon = style.icon;
                     return (
-                      <motion.li key={n._id} variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}>
+                      <motion.li
+                        key={n._id}
+                        layout
+                        variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+                        exit={{ opacity: 0, x: 40, height: 0, transition: { duration: 0.2, ease: easeExit } }}
+                        className="group relative overflow-hidden"
+                        data-testid="notification-item"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove(n._id);
+                          }}
+                          aria-label={`Delete notification: ${n.title}`}
+                          title="Delete"
+                          className="absolute top-2.5 right-2.5 z-10 grid size-7 place-items-center rounded-lg text-slate-400 transition-all duration-150 hover:bg-rose-50 hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        >
+                          <X className="size-4" />
+                        </button>
                         <button
                           onClick={() => openItem(n)}
-                          className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${n.read ? "" : "bg-brand-50/40"}`}
+                          className={`flex w-full gap-3 py-3 pr-11 pl-4 text-left transition-colors hover:bg-slate-50 ${n.read ? "" : "bg-brand-50/40"}`}
                         >
                           <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${style.cls}`}>
                             <Icon className="size-4.5" />
@@ -138,6 +158,7 @@ export default function NotificationBell() {
                       </motion.li>
                     );
                   })}
+                  </AnimatePresence>
                 </motion.ul>
               )}
             </div>
