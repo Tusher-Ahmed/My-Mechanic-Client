@@ -17,7 +17,8 @@
     "seed:admin": "npm run seed:admin -w server",
     "test": "npm test -w e2e",
     "test:api": "npm run test:api -w e2e",
-    "showcase": "npm run showcase -w e2e"
+    "showcase": "npm run showcase -w e2e",
+    "seed:demo": "npm run seed:demo -w server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -1,0 +1,34 @@
+# Render Blueprint – the My Mechanic API (free web service).
+# Render → New → Blueprint → pick this repository. You'll be asked for the values marked `sync: false`.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: my-mechanic-api
+    runtime: node
+    plan: free
+    region: singapore # closest Render region to Bangladesh
+    # install only the API's packages from the workspace lockfile (not the websites or tests)
+    buildCommand: npm ci --workspace server --omit=dev
+    startCommand: npm start --workspace server
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # only redeploy when the API changes
+    buildFilter:
+      paths:
+        - server/**
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true # Render creates a long random secret
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: MONGO_URL
+        sync: false # paste the MongoDB Atlas connection string
+      - key: CORS_ORIGINS
+        sync: false # https://<website>.vercel.app,https://<admin>.vercel.app

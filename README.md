@@ -187,6 +187,13 @@ npm run dev           # API :8080 · website :5173 · admin :5174
 | Admin panel | http://localhost:5174 |
 | API health check | http://localhost:8080/api/health |
 
+**Want something to click on straight away?** Add demo data – 4 garages around Dhaka with active plans and a
+demo customer (all passwords `demo1234`, e.g. customer `rahim@demo.mymechanic`, mechanic `karim@demo.mymechanic`):
+
+```bash
+npm run seed:demo
+```
+
 > New garages appear on the map once they have an active plan. Register a mechanic, choose a plan and
 > "pay" with the demo checkout – or grant a plan from the admin panel (**Mechanics → +30 days**).
 
@@ -198,6 +205,7 @@ npm run dev           # API :8080 · website :5173 · admin :5174
 | `npm run dev:server` / `dev:client` / `dev:admin` | Run one app |
 | `npm run build` | Production build of website and admin |
 | `npm run seed:admin` | Create (or reset the password of) the admin account |
+| `npm run seed:demo` | Add demo garages + a demo customer for trying the app locally |
 | `npm run test:api` | API tests |
 | `npm run showcase` | Browser walk-throughs in a visible window (screenshots + video) |
 | `npm test` | Everything: API tests, then the walk-throughs |
