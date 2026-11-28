@@ -13,13 +13,13 @@ import * as S from "../validation/schemas.js";
 import { populateParties, shapeOrder } from "./orders.js";
 import { notify, orderEvents } from "../services/notifications.js";
 import { Subscription } from "../models/Subscription.js";
-import { getPlanSettings, runReminders, savePlanSettings } from "../services/subscriptions.js";
+import { getPlanSettings, isActive, runReminders, savePlanSettings, startTrial } from "../services/subscriptions.js";
 
 const router = Router();
 router.use(requireAuth("admin"));
 
 /** Build list / create / update / delete routes for an account model (bodies validated by Zod). */
-function accountRoutes(path, Model, { create, update }, { onDelete, onCreate = (b) => b } = {}) {
+function accountRoutes(path, Model, { create, update }, { onDelete, onCreate = async (b) => b } = {}) {
   router.get(`/${path}`, async (_req, res) => {
     res.json(await Model.find().sort({ createdAt: -1 }).limit(1000));
   });
@@ -31,7 +31,9 @@ function accountRoutes(path, Model, { create, update }, { onDelete, onCreate = (
   });
 
   router.post(`/${path}`, validate({ body: create }), async (req, res) => {
-    const doc = await Model.create(onCreate(req.valid.body, req));
+    const doc = new Model(req.valid.body);
+    await onCreate(doc, req);
+    await doc.save();
     res.status(201).json(doc);
   });
 
@@ -57,8 +59,11 @@ accountRoutes("users", User, { create: S.adminUserCreate, update: S.adminUserUpd
   onDelete: (doc) => Promise.all([Order.deleteMany({ user: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
 });
 accountRoutes("mechanics", Mechanic, { create: S.adminMechanicCreate, update: S.adminMechanicUpdate }, {
-  // created by an admin = already checked, so approved at once
-  onCreate: (body, req) => ({ ...body, approvalStatus: "approved", approval: { at: new Date(), by: req.auth.id } }),
+  // created by an admin = already checked, so approved at once – and like any new garage it gets the free trial
+  onCreate: async (doc, req) => {
+    doc.set({ approvalStatus: "approved", approval: { at: new Date(), by: req.auth.id } });
+    await startTrial(doc);
+  },
   onDelete: (doc) => Promise.all([Order.deleteMany({ mechanic: doc._id }), Notification.deleteMany({ recipient: doc._id })]),
 });
 
@@ -192,16 +197,23 @@ router.put("/mechanics/:id/approval", validate({ params: S.idParams, body: S.app
   const { status, reason } = req.valid.body;
   m.approvalStatus = status;
   m.approval = { at: new Date(), by: req.auth.id, reason: status === "rejected" ? reason : undefined };
+  // a new garage's free trial starts when it's approved (once per garage)
+  const trialEnds = status === "approved" ? await startTrial(m) : null;
   await m.save();
+  const day = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   await notify({
     recipient: m._id,
     role: "mechanic",
     type: status === "approved" ? "order_completed" : "order_cancelled",
     title: status === "approved" ? "Your garage is approved 🎉" : "Your garage wasn't approved",
     body:
-      status === "approved"
-        ? "Choose a plan and your garage appears on the map for drivers nearby."
-        : `Reason: ${reason}. Update your trade licence in My shop to apply again.`,
+      status === "rejected"
+        ? `Reason: ${reason}. Update your trade licence in My shop to apply again.`
+        : trialEnds
+          ? `Your free trial has started – your garage is on the map until ${day(trialEnds)}. Choose a plan any time to stay visible after that.`
+          : isActive(m)
+            ? `Your garage is back on the map until ${day(m.subscriptionEndsAt)}.`
+            : "Choose a plan and your garage appears on the map for drivers nearby.",
     link: status === "approved" ? "/mechanic?tab=subscription" : "/mechanic?tab=shop",
   });
   res.json(m);

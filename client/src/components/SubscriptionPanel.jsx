@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { AlertTriangle, BadgeCheck, CalendarClock, Check, Crown, Receipt, Sparkles } from "lucide-react";
+import { AlertTriangle, BadgeCheck, CalendarClock, Check, Crown, Gift, Receipt, Sparkles } from "lucide-react";
 import { money } from "../lib/format";
 import { planDate, startCheckout } from "../lib/subscription";
 import { Button } from "./ui";
@@ -17,6 +17,23 @@ import { fadeUp, stagger } from "../lib/motion";
 export function RenewBanner({ sub, onOpen }) {
   if (!sub) return null;
   const best = sub.prices?.monthly;
+  if (sub.trial) {
+    return (
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} data-testid="trial-banner"
+        className="mb-8 flex flex-col gap-3 rounded-2xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-brand-200 sm:flex-row sm:items-center sm:justify-between">
+        <span className="flex items-start gap-2.5">
+          <Gift className="mt-0.5 size-5 shrink-0 text-brand-600" />
+          <span>
+            <b>Free trial</b> – your garage is on the map for <b>{sub.daysLeft} more day{sub.daysLeft === 1 ? "" : "s"}</b> ({planDate(sub.endsAt)}).
+            {best && ` Choose a plan any time – from ${money(best.amount)} for the first month – and it starts when the trial ends.`}
+          </span>
+        </span>
+        <Button size="sm" onClick={onOpen} className="shrink-0">
+          <Sparkles className="size-4" /> Choose a plan
+        </Button>
+      </motion.div>
+    );
+  }
   if (!sub.active) {
     const expired = !!sub.endsAt;
     return (
@@ -89,14 +106,59 @@ function PlanCard({ planKey, price, highlight, onBuy, busy, action, current }) {
   );
 }
 
+/** The free trial a new garage gets when it's approved. */
+function YourTrial({ sub }) {
+  const start = sub.trialStartedAt ? new Date(sub.trialStartedAt) : null;
+  const end = new Date(sub.endsAt);
+  const used = start ? Math.min(1, Math.max(0, (Date.now() - start) / (end - start))) : 0;
+  return (
+    <div className="card overflow-hidden ring-2 ring-brand-100" data-testid="plan-status">
+      <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600">
+            <Gift className="size-6" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-brand-700">Your plan</p>
+            <p className="font-display text-2xl font-bold text-ink-900">
+              Free trial · <span className="text-emerald-600">active</span>
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Your garage is on the map until <b className="text-ink-900">{planDate(sub.endsAt)}</b>. Choose a plan below any time –
+              it starts when the trial ends, so you don't lose any free days.
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 text-left sm:text-right">
+          <p className="font-display text-3xl font-bold text-brand-700" data-testid="days-left">{sub.daysLeft}</p>
+          <p className="text-xs font-medium text-slate-500">day{sub.daysLeft === 1 ? "" : "s"} left</p>
+        </div>
+      </div>
+      {start && (
+        <div className="border-t border-slate-100 px-6 py-4">
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>Started {planDate(start)}</span>
+            <span>Free</span>
+            <span>Ends {planDate(end)}</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={Math.round(used * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Free trial used">
+            <motion.div className="h-full rounded-full bg-brand-500" initial={{ width: 0 }} animate={{ width: `${Math.max(2, used * 100)}%` }} transition={{ duration: 0.8 }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The active plan: what it is, what was paid, the period and how much is left. */
 function YourPlan({ sub }) {
   // the paid purchase that covers today (plans stack, so pick the one whose period contains now)
   const now = Date.now();
   const paid = sub.history.filter((h) => h.status === "paid" && h.startsAt && h.endsAt);
   const current = paid.find((h) => new Date(h.startsAt) <= now && new Date(h.endsAt) > now) ?? paid[0];
-  const queued = paid.filter((h) => new Date(h.startsAt) > now);
+  const queued = paid.filter((h) => h !== current && new Date(h.startsAt) > now);
   const start = current ? new Date(current.startsAt) : null;
+  const startsLater = start && start > now; // bought during the free trial: the plan starts when the trial ends
   const end = new Date(sub.endsAt);
   const periodEnd = current ? new Date(current.endsAt) : end;
   const used = start ? Math.min(1, Math.max(0, (now - start) / (periodEnd - start))) : 0;
@@ -116,7 +178,8 @@ function YourPlan({ sub }) {
             </p>
             <p className="mt-1 text-sm text-slate-500">
               Your garage is on the map until <b className="text-ink-900">{planDate(sub.endsAt)}</b>
-              {queued.length > 0 && <> (includes {queued.length} extension{queued.length === 1 ? "" : "s"} already paid)</>}.
+              {queued.length > 0 && <> (includes {queued.length} extension{queued.length === 1 ? "" : "s"} already paid)</>}
+              {startsLater && <> – your free trial runs until {planDate(start)}, then this plan starts</>}.
             </p>
           </div>
         </div>
@@ -128,7 +191,7 @@ function YourPlan({ sub }) {
       {current && (
         <div className="border-t border-slate-100 px-6 py-4">
           <div className="flex justify-between text-xs text-slate-500">
-            <span>Started {planDate(current.startsAt)}</span>
+            <span>{startsLater ? "Starts" : "Started"} {planDate(current.startsAt)}</span>
             <span>Paid {money(current.amount)}{current.kind === "intro" ? " (starter price)" : current.kind === "renewal" ? " (loyalty price)" : ""}</span>
             <span>Ends {planDate(current.endsAt)}</span>
           </div>
@@ -154,7 +217,9 @@ export default function SubscriptionPanel({ sub }) {
 
   return (
     <div className="space-y-8">
-      {sub.active ? (
+      {sub.trial ? (
+        <YourTrial sub={sub} />
+      ) : sub.active ? (
         <YourPlan sub={sub} />
       ) : (
         <div className="card flex items-center gap-4 p-6 ring-2 ring-rose-200" data-testid="plan-status">
@@ -168,7 +233,7 @@ export default function SubscriptionPanel({ sub }) {
         </div>
       )}
 
-      {sub.active ? (
+      {sub.active && !sub.trial ? (
         <p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-600 ring-1 ring-slate-100" data-testid="renew-locked">
           Renewal opens when your plan ends on <b className="text-ink-900">{planDate(sub.endsAt)}</b>
           {sub.prices.monthly.discountPercent ? ` – you'll get ${sub.prices.monthly.discountPercent}% off as a returning customer` : ""}. We'll remind you 7 days and 1 day before.

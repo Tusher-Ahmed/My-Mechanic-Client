@@ -53,8 +53,10 @@ const MechanicSchema = new Schema({
     default: () => ({}),
   },
   // subscription: the garage is on the map / bookable only while subscriptionEndsAt is in the future
-  subscriptionPlan: { type: String, enum: ["monthly", "yearly"] },
+  // "trial" = the free trial a new garage gets once, when it's approved (no payment)
+  subscriptionPlan: { type: String, enum: ["trial", "monthly", "yearly"] },
   subscriptionEndsAt: { type: Date, index: true },
+  trialStartedAt: Date,
   subscriptionReminders: {
     type: new Schema({ d7: Date, d1: Date, expired: Date }, { _id: false }),
     default: () => ({}),

@@ -17,7 +17,8 @@ export function useSubscription() {
   useEffect(() => {
     reload();
   }, [reload]);
-  useNotificationEvents((n) => n.type === "subscription" && reload());
+  // payments, reminders and the admin's approval (which starts the free trial) all arrive as notifications
+  useNotificationEvents(() => reload());
   return { sub, reload };
 }
 

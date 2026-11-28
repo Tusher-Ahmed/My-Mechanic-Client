@@ -12,6 +12,7 @@ export const DEFAULT_PLANS = {
     yearly: { label: "Yearly", days: 365, price: 2499, introPrice: 1499 },
   },
   renewalDiscountPercent: 20,
+  trialDays: 7, // free trial for a newly approved garage (0 = no trial)
 };
 
 export async function getPlanSettings() {
@@ -23,17 +24,37 @@ export async function getPlanSettings() {
       yearly: { ...DEFAULT_PLANS.plans.yearly, ...(v.plans?.yearly ?? {}) },
     },
     renewalDiscountPercent: v.renewalDiscountPercent ?? DEFAULT_PLANS.renewalDiscountPercent,
+    trialDays: v.trialDays ?? DEFAULT_PLANS.trialDays,
   };
 }
 
 export async function savePlanSettings(value) {
-  await Setting.findByIdAndUpdate("plans", { value }, { upsert: true });
+  // fields left out keep their current value
+  await Setting.findByIdAndUpdate("plans", { value: { ...(await getPlanSettings()), ...value } }, { upsert: true });
   return getPlanSettings();
 }
 
 /** Garages with an active plan (trusted operator – sanitizeFilter would strip $gt otherwise). */
 export const activeFilter = () => ({ subscriptionEndsAt: mongoose.trusted({ $gt: new Date() }) });
 export const isActive = (mechanic) => !!mechanic?.subscriptionEndsAt && mechanic.subscriptionEndsAt > new Date();
+/** A paid plan is running (a garage on its free trial may buy a plan at any time). */
+export const onPaidPlan = (mechanic) => isActive(mechanic) && mechanic.subscriptionPlan !== "trial";
+
+/**
+ * Start the free trial of a new garage – once per garage, only if it never had a plan.
+ * Sets the fields on the document (the caller saves it). Returns the trial's end date, or null.
+ */
+export async function startTrial(mechanic) {
+  const { trialDays } = await getPlanSettings();
+  if (!trialDays || mechanic.trialStartedAt || isActive(mechanic)) return null;
+  if (!mechanic.isNew && (await Subscription.exists({ mechanic: mechanic._id, status: "paid" }))) return null;
+  const now = new Date();
+  mechanic.trialStartedAt = now;
+  mechanic.subscriptionPlan = "trial";
+  mechanic.subscriptionEndsAt = new Date(now.getTime() + trialDays * 86_400_000);
+  mechanic.subscriptionReminders = {};
+  return mechanic.subscriptionEndsAt;
+}
 
 /** Approved by an admin (garages from before approvals existed have no status and count as approved). */
 export const isApproved = (mechanic) => !mechanic?.approvalStatus || mechanic.approvalStatus === "approved";
@@ -113,7 +134,20 @@ export async function runReminders(now = new Date()) {
     const left = m.subscriptionEndsAt.getTime() - now.getTime();
     const flags = { ...(m.subscriptionReminders?.toObject?.() ?? m.subscriptionReminders ?? {}) };
     let message = null;
-    if (left <= 0 && !flags.expired) {
+    if (m.subscriptionPlan === "trial") {
+      // free trial: the starter price applies (not the returning-customer discount); no "7 days left" note for a 7-day trial
+      const from = `from ৳${settings.plans.monthly.introPrice.toLocaleString("en-US")} for the first month`;
+      if (left <= 0 && !flags.expired) {
+        flags.expired = now;
+        message = { title: "Your free trial has ended – your garage is hidden from the map", body: `Choose a plan (${from}) to appear again.` };
+        sent.expired++;
+      } else if (left > 0 && left <= day && !flags.d1) {
+        flags.d1 = now;
+        flags.d7 = flags.d7 ?? now;
+        message = { title: "Your free trial ends tomorrow", body: `Choose a plan now (${from}) to stay on the map – your trial days aren't lost.` };
+        sent.d1++;
+      }
+    } else if (left <= 0 && !flags.expired) {
       flags.expired = now;
       message = {
         title: "Your plan has expired – your garage is hidden from the map",

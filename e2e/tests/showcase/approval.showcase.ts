@@ -42,6 +42,7 @@ test("garage approval", async ({ page, browser, request }) => {
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByTestId("approval-step")).toContainText("We check your trade licence");
   await expect(page.getByTestId("approval-step")).toContainText("TRAD/DNCC/1234");
+  await expect(page.getByTestId("approval-step")).toContainText("7-day free trial");
   await pause(page, 600);
   await shot(page, "02-wizard-approval-step");
   await page.getByRole("button", { name: "Submit for approval" }).click();
@@ -73,6 +74,9 @@ test("garage approval", async ({ page, browser, request }) => {
   await expect(box).toContainText("TRAD/DNCC/1234");
   await box.getByRole("button", { name: "Reject" }).click(); // reason required
   await box.getByLabel("Reason (needed to reject)").fill("Licence number is incomplete – please add the year");
+  // with a reason typed, Approve can't be clicked by mistake
+  await expect(box.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await expect(admin.getByTestId("approve-disabled-hint")).toBeVisible();
   await pause(admin, 400);
   await shot(admin, "05-admin-review");
   await box.getByRole("button", { name: "Reject" }).click();
@@ -89,18 +93,38 @@ test("garage approval", async ({ page, browser, request }) => {
   await page.getByRole("button", { name: "Save shop" }).click();
   await expect(banner).toContainText("Waiting for approval");
 
-  // 5. the admin approves – the mechanic sees it at once and can choose a plan
+  // 5. the admin approves – the mechanic sees it at once: the 7-day free trial starts, plans can be bought any time
   await admin.reload();
   await admin.getByText(shopname).click();
   await expect(box).toContainText("TRAD/DNCC/1234/2026");
   await box.getByRole("button", { name: "Approve" }).click();
   await expect(box).toHaveCount(0);
   await expect(page.getByTestId("approval-banner")).toHaveCount(0, { timeout: 10_000 });
-  await expect(page.getByTestId("renew-banner")).toContainText("Choose a plan to go live");
+  await expect(page.getByTestId("trial-banner")).toContainText("Free trial");
+  await expect(page.getByTestId("trial-banner")).toContainText("7 more days");
+  await pause(page, 800);
+  await shot(page, "07-mechanic-approved-trial");
   await page.getByRole("tab", { name: "Subscription" }).click();
   await expect(page.getByTestId("plans-locked")).toHaveCount(0);
+  await expect(page.getByTestId("plan-status")).toContainText("Free trial · active");
+  await expect(page.getByTestId("days-left")).toHaveText("7");
+  await expect(page.getByTestId("plan-monthly")).toBeVisible(); // can buy during the trial
   await pause(page, 1000);
-  await shot(page, "07-mechanic-approved");
+  await shot(page, "07b-mechanic-trial-plans");
+
+  // 5b. a problem found later: the admin revokes the approval – the garage leaves the map, the mechanic sees why at once
+  const approved = admin.getByTestId("admin-approved");
+  await approved.getByText("Problem with this garage?").click();
+  await approved.getByLabel("Reason").fill("Trade licence doesn't match the shop name");
+  await pause(admin, 400);
+  await shot(admin, "07c-admin-revoke");
+  await approved.getByRole("button", { name: "Revoke approval" }).click();
+  await expect(admin.getByTestId("admin-approval")).toContainText("Rejected");
+  await expect(page.getByTestId("approval-banner")).toContainText("Your garage wasn't approved", { timeout: 10_000 });
+  await expect(page.getByTestId("approval-banner")).toContainText("doesn't match the shop name");
+  expect(await onMap()).toBe(0);
+  await pause(page, 600);
+  await shot(page, "07d-mechanic-revoked");
 
   // 6. a garage the admin creates is approved at once
   await admin.keyboard.press("Escape"); // close the drawer

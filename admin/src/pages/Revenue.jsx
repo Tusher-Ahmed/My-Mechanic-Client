@@ -75,15 +75,27 @@ function PlanEditor() {
         </div>
       ))}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <Field
-          label="Returning-customer discount %"
-          type="number"
-          min="0"
-          max="90"
-          className="w-56"
-          value={form.renewalDiscountPercent}
-          onChange={(e) => setForm((f) => ({ ...f, renewalDiscountPercent: e.target.value }))}
-        />
+        <div className="flex flex-wrap items-end gap-4">
+          <Field
+            label="Returning-customer discount %"
+            type="number"
+            min="0"
+            max="90"
+            className="w-56"
+            value={form.renewalDiscountPercent}
+            onChange={(e) => setForm((f) => ({ ...f, renewalDiscountPercent: e.target.value }))}
+          />
+          <Field
+            label="Free trial for new garages (days)"
+            hint="Starts when a garage is approved · 0 = no trial"
+            type="number"
+            min="0"
+            max="90"
+            className="w-56"
+            value={form.trialDays ?? 7}
+            onChange={(e) => setForm((f) => ({ ...f, trialDays: e.target.value }))}
+          />
+        </div>
         <Button type="submit" loading={busy}>
           <Save className="size-4" /> Save prices
         </Button>

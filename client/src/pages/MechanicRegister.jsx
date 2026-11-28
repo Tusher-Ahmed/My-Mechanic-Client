@@ -64,7 +64,7 @@ export default function MechanicRegister() {
   const set = (e) => setF((x) => ({ ...x, [e.target.name]: e.target.value }));
   const [plans, setPlans] = useState(null);
   useEffect(() => {
-    api.get("/subscriptions/plans").then(({ data }) => setPlans(data.plans)).catch(() => {});
+    api.get("/subscriptions/plans").then(({ data }) => setPlans({ ...data.plans, trialDays: data.trialDays })).catch(() => {});
   }, []);
 
   if (role === "mechanic")
@@ -218,7 +218,9 @@ export default function MechanicRegister() {
                     {[
                       { icon: FileCheck2, title: "We check your trade licence", text: `${f.tradeLicense.trim().toUpperCase() || "Your licence"} · usually within a day` },
                       { icon: BellRing, title: "You get a notification", text: "Approved – or told what to fix, so you can apply again." },
-                      { icon: Crown, title: "Choose a plan and go live", text: plans ? `From ${money(plans.monthly.introPrice)} for the first month · no commission on bookings` : "Low starter prices · no commission on bookings" },
+                      plans?.trialDays > 0
+                        ? { icon: Crown, title: `Go live with a ${plans.trialDays}-day free trial`, text: `Then from ${money(plans.monthly.introPrice)} for the first month · no commission on bookings` }
+                        : { icon: Crown, title: "Choose a plan and go live", text: plans ? `From ${money(plans.monthly.introPrice)} for the first month · no commission on bookings` : "Low starter prices · no commission on bookings" },
                     ].map((s, i) => (
                       <li key={s.title} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
                         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand-600 ring-1 ring-slate-200">

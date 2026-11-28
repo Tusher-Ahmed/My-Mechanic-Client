@@ -57,7 +57,8 @@ export async function registerMechanic(request: APIRequestContext, overrides: Re
     for (const n of items) await request.delete(`notifications/${n._id}`, auth(session.token));
     session.account.approvalStatus = "approved";
   }
-  if (subscribe && res.ok()) await grantPlan(request, session.account._id, 30);
+  // approval starts the free trial: either replace it with a 30-day plan, or end it (a garage without a plan)
+  if (res.ok() && (subscribe || approve)) await grantPlan(request, session.account._id, subscribe ? 30 : null);
   return { res, body: data, session };
 }
 

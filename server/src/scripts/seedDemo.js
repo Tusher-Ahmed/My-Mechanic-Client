@@ -1,11 +1,13 @@
-// Demo data for trying the app locally: garages around Dhaka (with active plans) + a demo customer.
+// Demo data: garages around Dhaka (approved, with a paid yearly plan) + a demo customer.
 // Usage: npm run seed:demo        (safe to run again – existing demo accounts are updated, not duplicated)
 // Refuses to run against a production database unless ALLOW_DEMO_SEED=true.
 import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { connectDB } from "../config/db.js";
 import { Mechanic } from "../models/Mechanic.js";
+import { Subscription } from "../models/Subscription.js";
 import { User } from "../models/User.js";
+import { activate, createPending } from "../services/subscriptions.js";
 
 if (env.isProduction && process.env.ALLOW_DEMO_SEED !== "true") {
   console.error("Refusing to add demo data in production. Set ALLOW_DEMO_SEED=true if you really want it.");
@@ -13,7 +15,6 @@ if (env.isProduction && process.env.ALLOW_DEMO_SEED !== "true") {
 }
 
 const PASSWORD = "demo1234";
-const in30days = () => new Date(Date.now() + 30 * 86_400_000);
 
 const garages = [
   {
@@ -73,14 +74,22 @@ for (const g of garages) {
     tradeLicense: `TRAD/DNCC/DEMO-${garages.indexOf(g) + 1}/2026`,
     approvalStatus: "approved",
     services: g.services.map(([serviceName, price]) => ({ serviceName, price })),
-    subscriptionPlan: "monthly",
-    subscriptionEndsAt: in30days(),
   };
   let m = await Mechanic.findOne({ email: g.email });
   if (m) m.set(data);
   else m = new Mechanic({ ...data, password: PASSWORD });
   await m.save();
-  console.log(`garage   ${g.shopname.padEnd(20)} ${g.email}`);
+
+  // a paid yearly plan through the normal (demo) checkout, so it shows in the plan history and revenue;
+  // skipped while an earlier paid plan is still running
+  const paid = await Subscription.exists({ mechanic: m._id, status: "paid", endsAt: mongoose.trusted({ $gt: new Date() }) });
+  if (!paid) {
+    m.subscriptionEndsAt = undefined; // replace any plan that was set without a payment
+    await m.save();
+    await activate(await createPending(m._id, "yearly", "demo"));
+  }
+  const fresh = await Mechanic.findById(m._id);
+  console.log(`garage   ${g.shopname.padEnd(20)} ${g.email.padEnd(28)} paid plan until ${fresh.subscriptionEndsAt.toISOString().slice(0, 10)}`);
 }
 
 let customer = await User.findOne({ email: "rahim@demo.mymechanic" });

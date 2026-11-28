@@ -214,6 +214,7 @@ const planPrice = z.object({
 export const planSettings = z.object({
   plans: z.object({ monthly: planPrice, yearly: planPrice }),
   renewalDiscountPercent: z.coerce.number().min(0).max(90),
+  trialDays: z.coerce.number().int("Trial days must be a whole number").min(0).max(90, "A free trial can be at most 90 days").optional(),
 });
 export const approval = z
   .object({
@@ -223,7 +224,7 @@ export const approval = z
   .refine((v) => v.status !== "rejected" || (v.reason?.length ?? 0) >= 3, { message: "Please give a reason for rejecting", path: ["reason"] });
 
 export const grantSubscription = z.object({
-  plan: z.enum(["monthly", "yearly"]).optional(),
+  plan: z.enum(["trial", "monthly", "yearly"]).optional(),
   endsAt: z.union([z.iso.datetime({ offset: true }), z.null()]),
 });
 

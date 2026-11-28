@@ -67,11 +67,11 @@ The original repositories are kept for reference.
 - Accept with an **arrival time**, verify the customer's code on arrival, finish inspections with findings.
 - **Own revenue** – service income and travel charges reported separately; cancelled jobs never count.
 - Shop settings: services and prices, inspection fee, car types, location and travel pricing.
-- **Subscription plans** (monthly / yearly) with reminders and a loyalty discount on renewal.
+- **7-day free trial** once the garage is approved, then **subscription plans** (monthly / yearly) with reminders and a loyalty discount on renewal.
 
 ### Admins
 
-- **Garage approvals:** check the trade licence, approve or reject with a reason. Garages added by an admin are approved at once.
+- **Garage approvals:** check the trade licence, approve or reject with a reason, or revoke a live garage later. Garages added by an admin are approved at once.
 - Dashboard and **revenue** reports (orders, service and travel charges, subscription income), editable plan prices.
 - Manage orders, mechanics, customers, contact messages and admins.
 
@@ -126,9 +126,9 @@ npm run dev                           # API, website and admin together
 
 All tests use Playwright against a separate test database that is wiped on every run.
 
-- **127 API tests**, including 15 security tests that perform real attacks (NoSQL injection, forged tokens,
+- **134 API tests**, including 15 security tests that perform real attacks (NoSQL injection, forged tokens,
   price manipulation, mass assignment, brute force).
-- **9 browser walk-throughs** of the full customer → mechanic → admin journey on production builds.
+- **10 browser walk-throughs** of the full customer → mechanic → admin journey on production builds.
 
 ```bash
 npm run test:api
@@ -148,7 +148,7 @@ npm run showcase
 ## Business model
 
 Customers pay the garage directly – the platform takes **no commission**. It earns from **garage subscriptions**:
-low starter prices for the first month or year, and a discount for returning garages. Only approved garages with an
+a free trial for new garages, low starter prices for the first month or year, and a discount for returning garages. Only approved garages with an
 active plan appear on the map. Payments currently use a demo checkout, ready for a real gateway (e.g. SSLCommerz, bKash).
 
 ## Author

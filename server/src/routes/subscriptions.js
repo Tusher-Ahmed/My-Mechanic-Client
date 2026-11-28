@@ -7,7 +7,7 @@ import { Mechanic } from "../models/Mechanic.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { badRequest, forbidden, notFound } from "../utils/httpError.js";
-import { activate, createPending, getPlanSettings, isActive, isApproved, markFailed, quotes } from "../services/subscriptions.js";
+import { activate, createPending, getPlanSettings, isActive, isApproved, markFailed, onPaidPlan, quotes } from "../services/subscriptions.js";
 import * as S from "../validation/schemas.js";
 
 const router = Router();
@@ -29,6 +29,9 @@ router.get("/me", requireAuth("mechanic"), async (req, res) => {
     plan: mechanic.subscriptionPlan ?? null,
     endsAt: mechanic.subscriptionEndsAt ?? null,
     daysLeft: isActive(mechanic) ? Math.ceil((mechanic.subscriptionEndsAt - Date.now()) / 86_400_000) : 0,
+    trial: isActive(mechanic) && mechanic.subscriptionPlan === "trial",
+    trialStartedAt: mechanic.trialStartedAt ?? null,
+    canBuy: isApproved(mechanic) && !onPaidPlan(mechanic),
     prices,
     history,
   });
@@ -50,8 +53,8 @@ router.post("/checkout", requireAuth("mechanic"), validate({ body: S.checkout })
         : "Your garage is waiting for approval. You can choose a plan as soon as it's approved."
     );
   }
-  // one plan at a time: renewing only opens when the current plan has ended
-  if (isActive(req.account)) throw stillActive(req.account);
+  // one paid plan at a time: renewing only opens when it has ended (during the free trial a plan can be bought any time)
+  if (onPaidPlan(req.account)) throw stillActive(req.account);
   const sub = await createPending(req.auth.id, req.valid.body.plan, "demo");
   res.status(201).json({ ...startCheckout(sub), plan: sub.plan, kind: sub.kind, amount: sub.amount, listPrice: sub.listPrice, days: sub.days });
 });
@@ -77,7 +80,7 @@ router.post("/demo/:tranId/pay", requireAuth("mechanic"), validate({ params: S.t
   if (sub.status !== "pending") throw badRequest(`This payment is already ${sub.status}`);
   // e.g. a second tab opened before the plan was activated
   const owner = await Mechanic.findById(sub.mechanic);
-  if (req.valid.body.outcome === "success" && isActive(owner)) {
+  if (req.valid.body.outcome === "success" && onPaidPlan(owner)) {
     await markFailed(sub, "cancelled");
     throw stillActive(owner);
   }
