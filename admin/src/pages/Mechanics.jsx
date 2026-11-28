@@ -156,9 +156,10 @@ export default function Mechanics() {
     try {
       const { data } = await api.put(`/admin/mechanics/${editing._id}/approval`, { status, ...(status === "rejected" ? { reason: rejectReason.trim() } : {}) });
       upsert(data);
-      setEditing((f) => ({ ...f, approvalStatus: data.approvalStatus, approval: data.approval }));
+      // approving can start the free trial, so the plan fields change too
+      setEditing((f) => ({ ...f, approvalStatus: data.approvalStatus, approval: data.approval, subscriptionEndsAt: data.subscriptionEndsAt, subscriptionPlan: data.subscriptionPlan }));
       setRejectReason("");
-      toast.success(status === "approved" ? "Garage approved – the mechanic has been notified" : "Garage rejected – the mechanic has been told why");
+      toast.success(status === "approved" ? "Garage approved – the mechanic has been notified" : "Garage rejected – it's off the map and the mechanic has been told why");
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -237,18 +238,37 @@ export default function Mechanics() {
                     <Button type="button" size="sm" variant="danger" onClick={() => decide("rejected")}>
                       <XCircle className="size-4" /> Reject
                     </Button>
-                    <Button type="button" size="sm" variant="success" onClick={() => decide("approved")}>
+                    {/* a typed reason means the admin is rejecting – don't let Approve send the garage live by mistake */}
+                    <Button type="button" size="sm" variant="success" onClick={() => decide("approved")} disabled={rejectReason.trim().length > 0} title={rejectReason.trim() ? "Clear the reason to approve" : undefined}>
                       <CheckCircle2 className="size-4" /> Approve
                     </Button>
                   </div>
                 </div>
+                {rejectReason.trim() && <p className="mt-2 text-xs text-amber-800" data-testid="approve-disabled-hint">You wrote a reason, so only Reject is available. Clear it to approve.</p>}
               </section>
+            )}
+            {!isNew && isApprovedStatus(editing) && (
+              <details className="group rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100" data-testid="admin-approved">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm">
+                  <span className="flex items-center gap-2 font-bold text-emerald-900">
+                    <ShieldCheck className="size-4" /> Approved{editing.tradeLicense && <span className="font-mono font-normal text-emerald-800">· {editing.tradeLicense}</span>}
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-800 underline-offset-2 group-open:hidden hover:underline">Problem with this garage?</span>
+                </summary>
+                <p className="mt-3 text-sm text-emerald-950">Revoking takes the garage off the map at once. The mechanic sees your reason and can fix the trade licence to apply again.</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <Field label="Reason" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} maxLength={300} placeholder="e.g. Licence number doesn't match the shop" className="flex-1" />
+                  <Button type="button" size="sm" variant="danger" onClick={() => decide("rejected")}>
+                    <XCircle className="size-4" /> Revoke approval
+                  </Button>
+                </div>
+              </details>
             )}
             {!isNew && (
               <section className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 ring-1 ${active ? "bg-emerald-50 ring-emerald-100" : "bg-rose-50 ring-rose-100"}`} data-testid="admin-plan">
                 <p className="text-sm">
                   <b>{active ? "On the map" : "Hidden from the map"}</b> ·{" "}
-                  {editing.subscriptionEndsAt ? `plan ${active ? "until" : "ended"} ${new Date(editing.subscriptionEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "never subscribed"}
+                  {editing.subscriptionEndsAt ? `${editing.subscriptionPlan === "trial" ? "free trial" : "plan"} ${active ? "until" : "ended"} ${new Date(editing.subscriptionEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : "never subscribed"}
                 </p>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" variant="secondary" onClick={extend30}>+30 days</Button>
@@ -344,6 +364,9 @@ export default function Mechanics() {
     </>
   );
 }
+
+/** Approved – garages from before approvals existed have no status and count as approved. */
+const isApprovedStatus = (m) => !m.approvalStatus || m.approvalStatus === "approved";
 
 function ApprovalChip({ status }) {
   if (status === "pending") return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-amber-800">pending</span>;

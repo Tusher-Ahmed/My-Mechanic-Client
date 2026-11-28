@@ -124,3 +124,23 @@ test("API-APR-07 only admins can approve or reject", async ({ request }) => {
   const self = await request.put("auth/me", { data: { approvalStatus: "approved" }, ...auth(mech.session.token) });
   expect((await self.json()).account?.approvalStatus ?? "pending").toBe("pending");
 });
+
+test("API-APR-08 the admin can revoke an approved garage: off the map at once, the mechanic is told why and can fix it", async ({ request }) => {
+  const mech = await registerMechanic(request); // approved, with a plan
+  expect(await onMap(request, mech.body.shopname)).toBe(true);
+  for (const n of await notes(request, mech)) await request.delete(`notifications/${n._id}`, auth(mech.session.token));
+
+  const res = await approveGarage(request, mech.session.account._id, "rejected", "Trade licence doesn't match the shop");
+  expect((await res.json()).approvalStatus).toBe("rejected");
+  expect(await onMap(request, mech.body.shopname)).toBe(false);
+  const [n] = await notes(request, mech);
+  expect(n.title).toBe("Your garage wasn't approved");
+  expect(n.link).toBe("/mechanic?tab=shop");
+
+  const me = (await (await request.get("auth/me", auth(mech.session.token))).json()).account;
+  expect(me.approvalStatus).toBe("rejected");
+  expect(me.approval.reason).toBe("Trade licence doesn't match the shop");
+  // fixing the licence sends it back for review
+  const fixed = await request.put("auth/me", { data: { tradeLicense: `TRAD/OK/${uid()}` }, ...auth(mech.session.token) });
+  expect((await fixed.json()).account.approvalStatus).toBe("pending");
+});

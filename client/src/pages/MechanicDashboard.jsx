@@ -7,6 +7,7 @@ import SubscriptionPanel, { RenewBanner } from "../components/SubscriptionPanel"
 import MechanicRevenue from "../components/MechanicRevenue";
 import { useSubscription } from "../lib/subscription";
 import { useAuth } from "../context/AuthContext";
+import { useNotificationEvents } from "../context/NotificationsContext";
 import { errorMessage } from "../lib/api";
 import { money } from "../lib/format";
 import { FilterChips, useMyOrders } from "./Account";
@@ -158,7 +159,10 @@ function ShopForm() {
 }
 
 export default function MechanicDashboard() {
-  const { account } = useAuth();
+  const { account, refreshMe } = useAuth();
+  // the admin can approve, reject or re-check the garage at any time – the decision arrives as a live
+  // notification, so reload the account and the page (banners, plans) updates without a refresh
+  useNotificationEvents(() => refreshMe().catch(() => {}));
   const [params, setParams] = useSearchParams();
   const TABS = ["orders", "revenue", "subscription", "shop", "profile"];
   const [tab, setTabState] = useState(() => (TABS.includes(params.get("tab")) ? params.get("tab") : "orders"));

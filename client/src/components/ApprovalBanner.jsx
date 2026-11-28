@@ -1,5 +1,4 @@
 // Mechanic dashboard: shows while the garage waits for an admin, or after a rejection.
-import { useEffect } from "react";
 import { motion } from "motion/react";
 import { FileWarning, Hourglass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -7,17 +6,10 @@ import { Button } from "./ui";
 
 export const isApproved = (account) => !account?.approvalStatus || account.approvalStatus === "approved";
 
+// (the dashboard reloads the account when the admin's decision arrives as a live notification)
 export default function ApprovalBanner({ onFix }) {
-  const { account, refreshMe } = useAuth();
+  const { account } = useAuth();
   const status = account?.approvalStatus;
-
-  // the admin's decision arrives as a live notification – reload the account so the page updates at once
-  useEffect(() => {
-    if (isApproved(account)) return;
-    const onNote = () => refreshMe().catch(() => {});
-    window.addEventListener("mm:notification", onNote);
-    return () => window.removeEventListener("mm:notification", onNote);
-  }, [account, refreshMe]);
 
   if (isApproved(account)) return null;
   const rejected = status === "rejected";

@@ -21,12 +21,18 @@ export function NotificationsProvider({ children }) {
   const [live, setLive] = useState(false);
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
+  const seen = useRef(null); // ids already known – so notifications fetched later (not live) still reach the pages
 
   const refresh = useCallback(async () => {
     try {
       const { data } = await api.get("/notifications");
       setItems(data.items);
       setUnread(data.unread);
+      // anything new that arrived while the live connection was down (free server asleep, tab in the
+      // background, proxy cut the stream) is broadcast like a live one, so open pages update themselves
+      const fresh = seen.current ? data.items.filter((n) => !seen.current.has(n._id)) : [];
+      seen.current = new Set([...(seen.current ?? []), ...data.items.map((n) => n._id)]);
+      for (const n of fresh.reverse()) window.dispatchEvent(new CustomEvent(EVENT, { detail: n }));
     } catch {
       /* offline or logged out – ignore */
     }
@@ -36,6 +42,7 @@ export function NotificationsProvider({ children }) {
     if (!role) {
       setItems([]);
       setUnread(0);
+      seen.current = null;
       return;
     }
     refresh();
@@ -63,6 +70,7 @@ export function NotificationsProvider({ children }) {
 
       source.addEventListener("notification", (e) => {
         const n = JSON.parse(e.data);
+        seen.current?.add(n._id);
         setItems((list) => [n, ...list.filter((x) => x._id !== n._id)].slice(0, 30));
         setUnread((u) => u + 1);
         setRing((r) => r + 1);
