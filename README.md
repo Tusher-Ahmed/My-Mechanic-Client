@@ -154,3 +154,9 @@ active plan appear on the map. Payments currently use a demo checkout, ready for
 ## Author
 
 **Tusher Ahmed** · [GitHub](https://github.com/Tusher-Ahmed) · [LinkedIn](https://www.linkedin.com/in/tusher-ahmed-6b9b70210/)
+
+## License
+
+© 2026 Tusher Ahmed. All rights reserved. This repository is public for viewing and
+evaluation only – it is **not** open source. You may not copy, reuse, modify, or
+redistribute it, in whole or in part, without written permission. See [LICENSE](LICENSE).
