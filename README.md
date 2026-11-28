@@ -12,6 +12,15 @@ React 19 · Vite · Tailwind CSS · Node.js · Express 5 · MongoDB · Server-Se
 
 ![Home page](docs/screenshots/home.webp)
 
+## Live demo
+
+- **Website:** [my-mechanic-tau.vercel.app](https://my-mechanic-tau.vercel.app)
+- **Admin panel:** [my-mechanic-admin.vercel.app](https://my-mechanic-admin.vercel.app)
+
+Try it as a customer with `rahim@demo.mymechanic` / `demo1234`, or as a mechanic with
+`karim@demo.mymechanic` / `demo1234`. The API runs on a free server that sleeps when unused, so the first request
+can take up to a minute.
+
 ## The idea
 
 When your car breaks down somewhere you don't know, finding a garage street by street takes time – and you
