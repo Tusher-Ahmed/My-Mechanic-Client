@@ -8,6 +8,8 @@ A full-stack web platform that connects car owners with nearby, verified garages
 
 React 19 · Vite · Tailwind CSS · Node.js · Express 5 · MongoDB · Server-Sent Events · Playwright
 
+**[🌐 Live website](https://my-mechanic-tau.vercel.app)** · **[🛠️ Admin panel](https://my-mechanic-admin.vercel.app)**
+
 </div>
 
 ![Home page](docs/screenshots/home.webp)
