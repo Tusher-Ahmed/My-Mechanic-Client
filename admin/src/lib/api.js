@@ -2,7 +2,10 @@ import axios from "axios";
 
 export const TOKEN_KEY = "mm_admin_token"; // separate from the website's login
 export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8080/api").replace(/\/$/, "");
-export const CLIENT_URL = (import.meta.env.VITE_CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
+// public website for "Open website" / store links: localhost in dev, the live site in production builds
+export const CLIENT_URL = (
+  import.meta.env.VITE_CLIENT_URL || (import.meta.env.DEV ? "http://localhost:5173" : "https://my-mechanic-tau.vercel.app")
+).replace(/\/$/, "");
 
 export const api = axios.create({ baseURL: API_URL, timeout: 60_000 });
 
